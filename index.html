@@ -2,85 +2,189 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>纯前端本地二维码生成器 (修复版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一个纯前端实现的二维码转换工具</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        lavender: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6', // 主色
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        }
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; background-color: #f4f7f6; }
-        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 90%; max-width: 600px; text-align: center; }
-        textarea { width: 100%; height: 100px; padding: 10px; margin-bottom: 20px; box-sizing: border-box; }
-        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        #qrcode { margin-top: 20px; display: flex; justify-content: center; min-height: 256px; }
+        /* 解决移动端点击高亮背景问题 */
+        * { -webkit-tap-highlight-color: transparent; }
+        /* 平滑滚动 */
+        html { scroll-behavior: smooth; }
+        /* 自定义滚动条 */
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track { background: #f5f3ff; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #a78bfa; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h2>二维码生成器</h2>
-        <textarea id="dataInput" placeholder="请输入内容..."></textarea>
-        <div>
-            <button onclick="generateQRCode()">生成二维码</button>
-            <button onclick="downloadQRCode()" id="downloadBtn" disabled>下载图片</button>
+<body class="bg-gradient-to-br from-lavender-100 via-purple-100 to-indigo-100 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 text-gray-700">
+
+    <main class="w-full max-w-lg bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white/50 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+        
+        <header class="bg-lavender-50/50 p-6 sm:p-8 text-center border-b border-lavender-100">
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-lavender-600 to-indigo-600">
+                    一个纯前端实现的<br class="sm:hidden">二维码转换工具
+                </span>
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-2">
+                本地安全生成 · 无需上传服务器
+            </p>
+        </header>
+
+        <div class="p-6 sm:p-8 space-y-6">
+            
+            <div class="relative group">
+                <textarea 
+                    id="dataInput" 
+                    placeholder="在此粘贴文本、网址或配置信息..." 
+                    class="w-full h-32 p-4 text-sm sm:text-base bg-lavender-50 border-2 border-transparent rounded-2xl outline-none resize-none transition-all duration-300 focus:bg-white focus:border-lavender-400 focus:ring-4 focus:ring-lavender-100 placeholder-gray-400 text-gray-700"
+                ></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button 
+                    onclick="generateQRCode()" 
+                    class="group col-span-1 bg-lavender-600 hover:bg-lavender-700 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-lavender-500/30 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                    <svg class="w-5 h-5 transition-transform group-hover:scale-110 group-active:rotate-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                    </svg>
+                    生成
+                </button>
+                
+                <button 
+                    onclick="downloadQRCode()" 
+                    id="downloadBtn" 
+                    disabled
+                    class="col-span-1 bg-gray-100 text-gray-400 font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-not-allowed group-enabled:bg-emerald-500 group-enabled:text-white group-enabled:shadow-lg group-enabled:shadow-emerald-500/30 group-enabled:hover:bg-emerald-600 group-enabled:active:scale-95 group-enabled:cursor-pointer"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    保存
+                </button>
+            </div>
+
+            <div class="relative bg-white border-2 border-dashed border-lavender-200 rounded-2xl p-6 min-h-[280px] flex items-center justify-center transition-colors hover:border-lavender-300">
+                <div id="placeholder" class="text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-lavender-50 mb-3">
+                        <svg class="w-8 h-8 text-lavender-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                        </svg>
+                    </div>
+                    <p class="text-sm text-lavender-400 font-medium">点击“生成”开始创造</p>
+                </div>
+
+                <div id="qrcode" class="hidden shadow-sm p-2 bg-white rounded-lg"></div>
+            </div>
+
         </div>
-        <div id="qrcode"></div>
-    </div>
+
+        <footer class="bg-gray-50/80 p-4 text-center border-t border-gray-100">
+            <p class="text-[10px] sm:text-xs font-medium text-gray-400 tracking-wider uppercase">
+                由 <span class="text-lavender-500 font-bold">[Gemini 3 Pro 生成]</span>
+            </p>
+        </footer>
+    </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
-        var qrcodeObj = null; // 全局变量存储对象
+        let qrcodeObj = null;
 
         function generateQRCode() {
-            var text = document.getElementById("dataInput").value;
-            var qrcodeContainer = document.getElementById("qrcode");
-            var downloadBtn = document.getElementById("downloadBtn");
+            const text = document.getElementById("dataInput").value.trim();
+            const qrcodeContainer = document.getElementById("qrcode");
+            const placeholder = document.getElementById("placeholder");
+            const downloadBtn = document.getElementById("downloadBtn");
 
-            if (!text) { alert("请输入内容"); return; }
-
-            // 检查库是否加载成功
-            if (typeof QRCode === 'undefined') {
-                alert("❌ 错误：二维码核心库未能加载！\n请检查您的网络能否访问 cdnjs.cloudflare.com");
+            if (!text) {
+                alert("请输入内容后再生成 ✨"); 
                 return;
             }
 
-            // 清空旧图
-            qrcodeContainer.innerHTML = "";
+            if (typeof QRCode === 'undefined') {
+                alert("❌ 网络连接异常，无法加载二维码核心库，请刷新页面重试。");
+                return;
+            }
+
+            qrcodeContainer.innerHTML = ""; 
+            placeholder.classList.add("hidden"); 
+            qrcodeContainer.classList.remove("hidden"); 
+            downloadBtn.disabled = true; 
+            downloadBtn.classList.remove("group-enabled"); 
 
             try {
-                // 生成新图
-                qrcodeObj = new QRCode(qrcodeContainer, {
-                    text: text,
-                    width: 256,
-                    height: 256,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.M // 改为M级，兼容性更好
-                });
-                
-                // 启用下载按钮
-                downloadBtn.disabled = false;
-                
+                setTimeout(() => {
+                    qrcodeObj = new QRCode(qrcodeContainer, {
+                        text: text,
+                        width: 256,
+                        height: 256,
+                        colorDark : "#4c1d95", 
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.M
+                    });
+
+                    downloadBtn.disabled = false;
+                    downloadBtn.classList.add("group-enabled");
+                }, 50);
+
             } catch (e) {
                 console.error(e);
-                alert("生成出错：" + e.message);
+                alert("生成失败，内容可能包含不支持的字符。");
+                placeholder.classList.remove("hidden");
+                qrcodeContainer.classList.add("hidden");
             }
         }
 
         function downloadQRCode() {
-            var canvas = document.querySelector("#qrcode canvas");
-            if(canvas) {
-                var link = document.createElement('a');
-                link.download = 'qrcode.png';
-                link.href = canvas.toDataURL();
+            const canvas = document.querySelector("#qrcode canvas");
+            const img = document.querySelector("#qrcode img"); 
+            
+            let url = null;
+
+            if (canvas) {
+                url = canvas.toDataURL("image/png");
+            } else if (img) {
+                url = img.src;
+            }
+
+            if (url) {
+                const link = document.createElement('a');
+                link.download = `qrcode_${new Date().getTime()}.png`;
+                link.href = url;
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
             } else {
-                // 兼容某些不生成 canvas 而是生成 img 标签的情况
-                var img = document.querySelector("#qrcode img");
-                if(img) {
-                    var link = document.createElement('a');
-                    link.download = 'qrcode.png';
-                    link.href = img.src;
-                    link.click();
-                }
+                alert("请先生成二维码 👻");
             }
         }
     </script>
