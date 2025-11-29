@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>一个纯前端实现的二维码转换工具</title>
+    <title>一个纯前端实现的二维码小工具</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -13,20 +13,13 @@
                 extend: {
                     colors: {
                         lavender: {
-                            50: '#f5f3ff',
-                            100: '#ede9fe',
-                            200: '#ddd6fe',
-                            300: '#c4b5fd',
-                            400: '#a78bfa',
-                            500: '#8b5cf6', // 主色
-                            600: '#7c3aed',
-                            700: '#6d28d9',
-                            800: '#5b21b6',
-                            900: '#4c1d95',
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+                            400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+                            800: '#5b21b6', 900: '#4c1d95',
                         }
                     },
-                    animation: {
-                        'spin-slow': 'spin 3s linear infinite',
+                    boxShadow: {
+                        'soft': '0 20px 60px -15px rgba(139, 92, 246, 0.2)',
                     }
                 }
             }
@@ -34,159 +27,304 @@
     </script>
 
     <style>
-        /* 解决移动端点击高亮背景问题 */
         * { -webkit-tap-highlight-color: transparent; }
-        /* 平滑滚动 */
-        html { scroll-behavior: smooth; }
-        /* 自定义滚动条 */
-        textarea::-webkit-scrollbar { width: 8px; }
-        textarea::-webkit-scrollbar-track { background: #f5f3ff; border-radius: 4px; }
-        textarea::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 4px; }
-        textarea::-webkit-scrollbar-thumb:hover { background: #a78bfa; }
+        input[type="file"]::file-selector-button { display: none; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-lavender-100 via-purple-100 to-indigo-100 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 text-gray-700">
+<body class="bg-gradient-to-br from-lavender-50 via-purple-50 to-indigo-100 h-screen w-screen overflow-hidden flex flex-col items-center justify-center text-gray-700 font-sans">
 
-    <main class="w-full max-w-lg bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white/50 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+    <main class="bg-white/90 backdrop-blur-2xl shadow-soft border border-white/60 flex flex-col transition-all duration-300 relative overflow-hidden
+                 w-full h-full rounded-none
+                 sm:w-[460px] sm:h-[680px] sm:rounded-[2.5rem]">
         
-        <header class="bg-lavender-50/50 p-6 sm:p-8 text-center border-b border-lavender-100">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
+        <header class="pt-8 pb-4 px-8 text-center flex-shrink-0 z-20 bg-white/0">
+            <h1 class="text-xl font-extrabold tracking-tight text-gray-800">
                 <span class="bg-clip-text text-transparent bg-gradient-to-r from-lavender-600 to-indigo-600">
-                    一个纯前端实现的<br class="sm:hidden">二维码转换工具
+                    一个纯前端实现的二维码小工具
                 </span>
             </h1>
-            <p class="text-xs sm:text-sm text-gray-400 mt-2">
-                本地安全生成 · 无需上传服务器
-            </p>
         </header>
 
-        <div class="p-6 sm:p-8 space-y-6">
-            
-            <div class="relative group">
-                <textarea 
-                    id="dataInput" 
-                    placeholder="在此粘贴文本、网址或配置信息..." 
-                    class="w-full h-32 p-4 text-sm sm:text-base bg-lavender-50 border-2 border-transparent rounded-2xl outline-none resize-none transition-all duration-300 focus:bg-white focus:border-lavender-400 focus:ring-4 focus:ring-lavender-100 placeholder-gray-400 text-gray-700"
-                ></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <button 
-                    onclick="generateQRCode()" 
-                    class="group col-span-1 bg-lavender-600 hover:bg-lavender-700 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-lavender-500/30 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                    <svg class="w-5 h-5 transition-transform group-hover:scale-110 group-active:rotate-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+        <div class="px-8 pb-2 flex-shrink-0 z-20">
+            <div class="p-1.5 bg-gray-100/80 rounded-2xl grid grid-cols-2 gap-1 font-medium text-sm relative shadow-inner">
+                <button onclick="switchTab('generate')" id="tab-generate" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-lavender-700 bg-white shadow-sm ring-1 ring-black/5 font-bold">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                     </svg>
                     生成
                 </button>
-                
-                <button 
-                    onclick="downloadQRCode()" 
-                    id="downloadBtn" 
-                    disabled
-                    class="col-span-1 bg-gray-100 text-gray-400 font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-not-allowed group-enabled:bg-emerald-500 group-enabled:text-white group-enabled:shadow-lg group-enabled:shadow-emerald-500/30 group-enabled:hover:bg-emerald-600 group-enabled:active:scale-95 group-enabled:cursor-pointer"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    保存
+                <button onclick="switchTab('scan')" id="tab-scan" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200/50">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    识别
                 </button>
             </div>
-
-            <div class="relative bg-white border-2 border-dashed border-lavender-200 rounded-2xl p-6 min-h-[280px] flex items-center justify-center transition-colors hover:border-lavender-300">
-                <div id="placeholder" class="text-center">
-                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-lavender-50 mb-3">
-                        <svg class="w-8 h-8 text-lavender-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                        </svg>
-                    </div>
-                    <p class="text-sm text-lavender-400 font-medium">点击“生成”开始创造</p>
-                </div>
-
-                <div id="qrcode" class="hidden shadow-sm p-2 bg-white rounded-lg"></div>
-            </div>
-
         </div>
 
-        <footer class="bg-gray-50/80 p-4 text-center border-t border-gray-100">
-            <p class="text-[10px] sm:text-xs font-medium text-gray-400 tracking-wider uppercase">
+        <div class="relative flex-1 w-full overflow-hidden">
+            
+            <div id="panel-generate" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-0">
+                
+                <div class="flex-grow flex flex-col min-h-0 mb-4">
+                     <textarea id="genInput" placeholder="在此粘贴文本、网址或配置信息..." class="w-full h-full p-4 text-sm bg-lavender-50/50 border-2 border-transparent rounded-2xl outline-none resize-none focus:bg-white focus:border-lavender-400 focus:ring-4 focus:ring-lavender-100 transition-all text-gray-600 placeholder-gray-400 custom-scrollbar"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-3 flex-shrink-0 mb-4">
+                    <button 
+                        onclick="generateQRCode()" 
+                        class="group col-span-2 bg-lavender-600 hover:bg-lavender-700 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-lavender-500/30 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                        <svg class="w-5 h-5 transition-transform group-hover:scale-110 group-active:rotate-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                        </svg>
+                        生成
+                    </button>
+
+                    <button onclick="downloadQRCode()" id="downloadBtn" disabled class="col-span-1 bg-gray-100 text-gray-400 font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed group-enabled:bg-emerald-500 group-enabled:text-white group-enabled:shadow-lg group-enabled:shadow-emerald-500/25 group-enabled:hover:bg-emerald-600 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        保存
+                    </button>
+                </div>
+
+                <div class="h-[240px] flex-shrink-0 bg-white border-2 border-dashed border-lavender-200 rounded-2xl p-4 flex items-center justify-center transition-all hover:border-lavender-300">
+                    <div id="genPlaceholder" class="text-center">
+                        <div class="w-16 h-16 bg-lavender-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-8 h-8 text-lavender-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                            </svg>
+                        </div>
+                        <p class="text-base text-lavender-400 font-bold tracking-wide">输入内容后点击生成</p>
+                    </div>
+                    <div id="qrcode" class="hidden shadow-xl p-3 bg-white rounded-xl"></div>
+                </div>
+            </div>
+
+            <div id="panel-scan" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-full opacity-0 pointer-events-none">
+                
+                <div class="flex-shrink-0 space-y-3 mb-4">
+                    <label class="block group cursor-pointer">
+                        <div id="dropZone" class="relative h-36 border-2 border-dashed border-lavender-300 rounded-2xl bg-lavender-50/50 hover:bg-lavender-50 hover:border-lavender-500 transition-all flex flex-col items-center justify-center text-center p-4 group-active:scale-[0.99]">
+                            <input type="file" id="fileInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)">
+                            <div class="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6 text-lavender-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <p class="text-xs font-bold text-gray-600">点击上传 / 拖拽文件</p>
+                            <p class="text-[10px] text-lavender-400 mt-1">支持 Ctrl+V 粘贴截图</p>
+                        </div>
+                    </label>
+                    
+                    <div id="fileNameDisplay" class="hidden items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 text-xs rounded-lg border border-indigo-100 animate-pulse">
+                        <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span class="truncate font-medium" id="fileNameText">image.png</span>
+                    </div>
+                </div>
+
+                <div class="flex-grow flex flex-col min-h-0 relative">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 flex items-center gap-2 flex-shrink-0">
+                        识别结果
+                        <span id="scanStatus" class="hidden text-red-500 font-normal normal-case ml-auto text-[10px] bg-red-50 px-2 py-0.5 rounded-full">未发现二维码</span>
+                    </label>
+                    
+                    <div class="relative flex-1 h-full">
+                        <textarea id="scanResult" readonly placeholder="识别内容显示区..." class="w-full h-full p-4 text-sm bg-gray-50 border border-gray-200 rounded-2xl resize-none text-gray-700 focus:bg-white focus:border-lavender-300 outline-none transition-colors font-mono leading-relaxed custom-scrollbar"></textarea>
+                        
+                        <button onclick="copyResult()" id="copyBtn" class="absolute bottom-3 right-3 p-2 bg-white shadow-md border border-gray-100 rounded-xl hover:text-lavender-600 hover:shadow-lg text-gray-400 transition-all active:scale-90" title="复制结果">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="p-4 text-center mt-auto flex-shrink-0 z-20">
+            <p class="text-[10px] font-medium text-gray-400 tracking-wider uppercase">
                 由 <span class="text-lavender-500 font-bold">[Gemini 3 Pro 生成]</span>
             </p>
         </footer>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
+        // === Tab 切换逻辑 ===
+        function switchTab(tab) {
+            const genPanel = document.getElementById('panel-generate');
+            const scanPanel = document.getElementById('panel-scan');
+            const genTab = document.getElementById('tab-generate');
+            const scanTab = document.getElementById('tab-scan');
+
+            const activeClass = "text-lavender-700 bg-white shadow-sm ring-1 ring-black/5 font-bold z-10";
+            const inactiveClass = "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 z-0";
+
+            if (tab === 'generate') {
+                genPanel.classList.remove('translate-x-[-100%]', 'opacity-0', 'pointer-events-none');
+                scanPanel.classList.add('translate-x-full', 'opacity-0', 'pointer-events-none');
+                genTab.className = `relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeClass}`;
+                scanTab.className = `relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${inactiveClass}`;
+            } else {
+                scanPanel.classList.remove('translate-x-full', 'opacity-0', 'pointer-events-none');
+                genPanel.classList.add('translate-x-[-100%]', 'opacity-0', 'pointer-events-none');
+                scanTab.className = `relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeClass}`;
+                genTab.className = `relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${inactiveClass}`;
+            }
+        }
+
+        // === 生成功能 ===
         let qrcodeObj = null;
-
         function generateQRCode() {
-            const text = document.getElementById("dataInput").value.trim();
-            const qrcodeContainer = document.getElementById("qrcode");
-            const placeholder = document.getElementById("placeholder");
-            const downloadBtn = document.getElementById("downloadBtn");
+            const text = document.getElementById("genInput").value.trim();
+            const container = document.getElementById("qrcode");
+            const placeholder = document.getElementById("genPlaceholder");
+            const dlBtn = document.getElementById("downloadBtn");
 
-            if (!text) {
-                alert("请输入内容后再生成 ✨"); 
-                return;
-            }
+            if (!text) { alert("✨ 请输入内容后再生成"); return; }
+            if (typeof QRCode === 'undefined') { alert("❌ 核心库加载失败，请检查网络"); return; }
 
-            if (typeof QRCode === 'undefined') {
-                alert("❌ 网络连接异常，无法加载二维码核心库，请刷新页面重试。");
-                return;
-            }
+            container.innerHTML = "";
+            placeholder.classList.add("hidden");
+            container.classList.remove("hidden");
+            dlBtn.disabled = true;
+            dlBtn.classList.remove("group-enabled");
 
-            qrcodeContainer.innerHTML = ""; 
-            placeholder.classList.add("hidden"); 
-            qrcodeContainer.classList.remove("hidden"); 
-            downloadBtn.disabled = true; 
-            downloadBtn.classList.remove("group-enabled"); 
+            const size = Math.min(container.parentElement.clientWidth - 32, 210);
 
-            try {
-                setTimeout(() => {
-                    qrcodeObj = new QRCode(qrcodeContainer, {
-                        text: text,
-                        width: 256,
-                        height: 256,
-                        colorDark : "#4c1d95", 
-                        colorLight : "#ffffff",
+            setTimeout(() => {
+                try {
+                    qrcodeObj = new QRCode(container, {
+                        text: text, width: size, height: size,
+                        colorDark : "#4c1d95", colorLight : "#ffffff",
                         correctLevel : QRCode.CorrectLevel.M
                     });
-
-                    downloadBtn.disabled = false;
-                    downloadBtn.classList.add("group-enabled");
-                }, 50);
-
-            } catch (e) {
-                console.error(e);
-                alert("生成失败，内容可能包含不支持的字符。");
-                placeholder.classList.remove("hidden");
-                qrcodeContainer.classList.add("hidden");
-            }
+                    dlBtn.disabled = false;
+                    dlBtn.classList.add("group-enabled");
+                } catch(e) {
+                    alert("生成失败: " + e.message);
+                    placeholder.classList.remove("hidden");
+                    container.classList.add("hidden");
+                }
+            }, 50);
         }
 
         function downloadQRCode() {
+            const img = document.querySelector("#qrcode img");
             const canvas = document.querySelector("#qrcode canvas");
-            const img = document.querySelector("#qrcode img"); 
-            
             let url = null;
+            if (canvas) url = canvas.toDataURL("image/png");
+            else if (img) url = img.src;
 
-            if (canvas) {
-                url = canvas.toDataURL("image/png");
-            } else if (img) {
-                url = img.src;
-            }
-
-            if (url) {
+            if(url) {
                 const link = document.createElement('a');
-                link.download = `qrcode_${new Date().getTime()}.png`;
+                link.download = `QR_${new Date().toISOString().slice(0,10)}.png`;
                 link.href = url;
-                document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link);
-            } else {
-                alert("请先生成二维码 👻");
             }
         }
+
+        // === 识别功能 ===
+        function updateFileName(name) {
+            const display = document.getElementById('fileNameDisplay');
+            const text = document.getElementById('fileNameText');
+            display.classList.remove('hidden');
+            display.classList.remove('animate-pulse'); 
+            void display.offsetWidth; 
+            display.classList.add('animate-pulse');
+            setTimeout(() => display.classList.remove('animate-pulse'), 1000);
+            text.textContent = name;
+        }
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                updateFileName(file.name);
+                processImage(file);
+                input.value = ''; 
+            }
+        }
+
+        document.addEventListener('paste', (event) => {
+            if (document.getElementById('panel-scan').classList.contains('opacity-0')) return;
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    const timestamp = new Date().toLocaleTimeString('zh-CN', {hour12:false}).replace(/:/g, '');
+                    updateFileName(`粘贴截图_${timestamp}.png`);
+                    processImage(blob);
+                    event.preventDefault(); 
+                    break;
+                }
+            }
+        });
+
+        function processImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => scanImageElement(img);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function scanImageElement(img) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            context.drawImage(img, 0, 0, img.width, img.height);
+            
+            const statusEl = document.getElementById('scanStatus');
+            const resultEl = document.getElementById('scanResult');
+
+            try {
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+                if (code) {
+                    resultEl.value = code.data;
+                    statusEl.classList.add('hidden');
+                } else {
+                    statusEl.textContent = "未发现二维码";
+                    statusEl.classList.remove('hidden');
+                    resultEl.value = "";
+                }
+            } catch (e) {
+                console.error(e);
+                statusEl.textContent = "解析出错";
+                statusEl.classList.remove('hidden');
+            }
+        }
+
+        function copyResult() {
+            const res = document.getElementById('scanResult');
+            if(!res.value) return;
+            res.select();
+            document.execCommand("copy");
+            const btn = document.getElementById('copyBtn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+            btn.classList.add('border-emerald-200', 'bg-emerald-50');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('border-emerald-200', 'bg-emerald-50');
+            }, 1500);
+        }
+
+        // 拖拽
+        const dropZone = document.getElementById('dropZone');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
+            dropZone.addEventListener(e, (ev) => { ev.preventDefault(); ev.stopPropagation(); }, false);
+        });
+        ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('bg-lavender-100', 'border-lavender-500', 'scale-[1.02]'), false));
+        ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('bg-lavender-100', 'border-lavender-500', 'scale-[1.02]'), false));
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if(dt.files && dt.files[0]) {
+                handleFileSelect({files: dt.files});
+            }
+        }, false);
     </script>
 </body>
 </html>
