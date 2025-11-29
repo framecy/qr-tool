@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纯前端本地二维码生成器 (修复版)</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; background-color: #f4f7f6; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 90%; max-width: 600px; text-align: center; }
+        textarea { width: 100%; height: 100px; padding: 10px; margin-bottom: 20px; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #qrcode { margin-top: 20px; display: flex; justify-content: center; min-height: 256px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>二维码生成器</h2>
+        <textarea id="dataInput" placeholder="请输入内容..."></textarea>
+        <div>
+            <button onclick="generateQRCode()">生成二维码</button>
+            <button onclick="downloadQRCode()" id="downloadBtn" disabled>下载图片</button>
+        </div>
+        <div id="qrcode"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        var qrcodeObj = null; // 全局变量存储对象
+
+        function generateQRCode() {
+            var text = document.getElementById("dataInput").value;
+            var qrcodeContainer = document.getElementById("qrcode");
+            var downloadBtn = document.getElementById("downloadBtn");
+
+            if (!text) { alert("请输入内容"); return; }
+
+            // 检查库是否加载成功
+            if (typeof QRCode === 'undefined') {
+                alert("❌ 错误：二维码核心库未能加载！\n请检查您的网络能否访问 cdnjs.cloudflare.com");
+                return;
+            }
+
+            // 清空旧图
+            qrcodeContainer.innerHTML = "";
+
+            try {
+                // 生成新图
+                qrcodeObj = new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 256,
+                    height: 256,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.M // 改为M级，兼容性更好
+                });
+                
+                // 启用下载按钮
+                downloadBtn.disabled = false;
+                
+            } catch (e) {
+                console.error(e);
+                alert("生成出错：" + e.message);
+            }
+        }
+
+        function downloadQRCode() {
+            var canvas = document.querySelector("#qrcode canvas");
+            if(canvas) {
+                var link = document.createElement('a');
+                link.download = 'qrcode.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            } else {
+                // 兼容某些不生成 canvas 而是生成 img 标签的情况
+                var img = document.querySelector("#qrcode img");
+                if(img) {
+                    var link = document.createElement('a');
+                    link.download = 'qrcode.png';
+                    link.href = img.src;
+                    link.click();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
