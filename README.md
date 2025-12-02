@@ -1,6 +1,7 @@
 # 📱 纯前端二维码小工具 (QR Code Tool)
 
-<img width="2110" height="1880" alt="screenshot" src="https://github.com/user-attachments/assets/91fcf291-7184-44d0-ba90-e5b027b92d78" />
+<img width="438" height="600" alt="img1" src="https://github.com/user-attachments/assets/3d9ab11e-7205-4313-9f47-a697d60aa40c" />
+<img width="438" height="600" alt="img2" src="https://github.com/user-attachments/assets/d0a9c685-68fe-4de0-af7d-a298f6bf119e" />
 
 
 
