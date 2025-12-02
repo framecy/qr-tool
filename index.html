@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>一个纯前端实现的二维码小工具</title>
+    <title>二维码小工具</title>
     
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 配置 Tailwind 主题与 Dark Mode -->
+    <!-- 配置 Tailwind 主题 -->
     <script>
         tailwind.config = {
-            darkMode: 'class', // 手动控制暗黑模式
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -20,12 +20,19 @@
                             400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
                             800: '#5b21b6', 900: '#4c1d95',
                         },
-                        darkbg: '#0f172a', // Slate 900
-                        darkcard: '#1e293b', // Slate 800
+                        darkbg: '#0f172a', darkcard: '#1e293b',
                     },
                     boxShadow: {
                         'soft': '0 20px 60px -15px rgba(139, 92, 246, 0.2)',
-                        'glow': '0 0 20px -5px rgba(139, 92, 246, 0.4)',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        }
                     }
                 }
             }
@@ -33,160 +40,176 @@
     </script>
 
     <style>
-        /* 基础重置 */
         * { -webkit-tap-highlight-color: transparent; }
         input[type="file"]::file-selector-button { display: none; }
         
-        /* 平滑过渡所有颜色变化 */
-        body, div, textarea, button, svg, span {
-            transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+        body, div, textarea, button, svg, span, h1, p, img {
+            transition-property: color, background-color, border-color, transform, opacity, fill, stroke;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
             transition-duration: 300ms;
         }
 
-        /* 滚动条适配 */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #ddd6fe; border-radius: 20px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #c4b5fd; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-lavender-50 via-purple-50 to-indigo-100 dark:from-darkbg dark:via-slate-900 dark:to-slate-800 h-screen w-screen overflow-hidden flex flex-col items-center justify-center text-gray-700 dark:text-gray-200 font-sans">
 
-    <!-- 日夜切换按钮 (绝对定位在右上角) -->
-    <button onclick="toggleTheme()" class="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-white/50 dark:bg-slate-700/50 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 transition-all text-gray-600 dark:text-yellow-400 group border border-white/20 dark:border-white/10" title="切换深色模式">
-        <!-- 太阳图标 (Dark模式隐藏) -->
-        <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-        <!-- 月亮图标 (Light模式隐藏) -->
-        <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-    </button>
+    <!-- Toast 容器 -->
+    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-xs items-center"></div>
 
-    <!-- 主容器 -->
+    <!-- 顶部功能区 (历史 & 主题) -->
+    <div class="absolute top-4 right-4 z-50 flex gap-3">
+        <!-- 历史记录按钮 -->
+        <button onclick="toggleHistory(true)" class="p-2.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 text-gray-600 dark:text-lavender-300 border border-white/20 dark:border-white/10 transition-transform" title="历史记录">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </button>
+
+        <!-- 深色模式切换 -->
+        <button onclick="toggleTheme()" class="p-2.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 text-gray-600 dark:text-yellow-400 border border-white/20 dark:border-white/10 transition-transform" title="切换深色模式">
+            <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+        </button>
+    </div>
+
+    <!-- 主容器 Card -->
     <main class="bg-white/90 dark:bg-darkcard/90 backdrop-blur-2xl shadow-soft dark:shadow-none border border-white/60 dark:border-white/5 flex flex-col transition-all duration-300 relative overflow-hidden
                  w-full h-full rounded-none
                  sm:w-[460px] sm:h-[680px] sm:rounded-[2.5rem]">
         
-        <!-- 头部标题 -->
-        <header class="pt-8 pb-4 px-8 text-center flex-shrink-0 z-20">
-            <h1 class="text-xl font-extrabold tracking-tight text-gray-800 dark:text-white">
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-lavender-600 to-indigo-600 dark:from-lavender-400 dark:to-indigo-400">
-                    一个纯前端实现的二维码小工具
-                </span>
-            </h1>
-        </header>
-
-        <!-- 顶部 Tab 切换 -->
-        <div class="px-8 pb-2 flex-shrink-0 z-20">
-            <div class="p-1.5 bg-gray-100/80 dark:bg-slate-700/50 rounded-2xl grid grid-cols-2 gap-1 font-medium text-sm relative shadow-inner dark:shadow-none border border-transparent dark:border-white/5">
-                <!-- Tab 1: 生成 -->
-                <button onclick="switchTab('generate')" id="tab-generate" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-lavender-700 dark:text-lavender-300 bg-white dark:bg-slate-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 font-bold">
-                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                    </svg>
-                    生成
-                </button>
-                <!-- Tab 2: 识别 -->
-                <button onclick="switchTab('scan')" id="tab-scan" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-slate-600/50">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    识别
-                </button>
-            </div>
-        </div>
-
-        <!-- 面板容器 -->
-        <div class="relative flex-1 w-full overflow-hidden">
+        <!-- ================= 核心内容区 (Header + Tabs + Panels) ================= -->
+        <div id="main-content" class="flex flex-col h-full w-full relative z-10 transition-transform duration-500">
             
-            <!-- Panel 1: 生成面板 -->
-            <div id="panel-generate" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-0">
-                
-                <!-- 输入框 -->
-                <div class="flex-grow flex flex-col min-h-0 mb-4">
-                     <textarea id="genInput" placeholder="在此粘贴文本、网址或配置信息..." class="w-full h-full p-4 text-sm bg-lavender-50/50 dark:bg-slate-700/30 border-2 border-transparent rounded-2xl outline-none resize-none focus:bg-white dark:focus:bg-slate-700 focus:border-lavender-400 dark:focus:border-lavender-500/50 focus:ring-4 focus:ring-lavender-100 dark:focus:ring-lavender-500/20 transition-all text-gray-600 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 custom-scrollbar"></textarea>
-                </div>
-                
-                <!-- 按钮组 -->
-                <div class="grid grid-cols-3 gap-3 flex-shrink-0 mb-4">
-                    <button 
-                        onclick="generateQRCode()" 
-                        class="group col-span-2 bg-lavender-600 hover:bg-lavender-700 dark:bg-lavender-700 dark:hover:bg-lavender-600 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-lavender-500/30 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
-                    >
-                        <svg class="w-5 h-5 transition-transform group-hover:scale-110 group-active:rotate-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+            <!-- 头部标题 -->
+            <header class="pt-8 pb-4 px-8 text-center flex-shrink-0">
+                <h1 class="text-xl font-extrabold tracking-tight text-gray-800 dark:text-white">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-lavender-600 to-indigo-600 dark:from-lavender-400 dark:to-indigo-400">
+                        一个纯前端实现的二维码小工具
+                    </span>
+                </h1>
+            </header>
+
+            <!-- 顶部 Tab 切换 -->
+            <div class="px-8 pb-2 flex-shrink-0">
+                <div class="p-1.5 bg-gray-100/80 dark:bg-slate-700/50 rounded-2xl grid grid-cols-2 gap-1 font-medium text-sm relative shadow-inner dark:shadow-none border border-transparent dark:border-white/5">
+                    <button onclick="switchTab('generate')" id="tab-generate" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-lavender-700 dark:text-lavender-300 bg-white dark:bg-slate-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 font-bold">
+                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                         </svg>
                         生成
                     </button>
-
-                    <button onclick="downloadQRCode()" id="downloadBtn" disabled class="col-span-1 bg-gray-100 text-gray-400 dark:bg-slate-700 dark:text-gray-400 font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed group-enabled:bg-emerald-500 group-enabled:text-white group-enabled:shadow-lg group-enabled:shadow-emerald-500/25 group-enabled:hover:bg-emerald-600 transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        保存
+                    <button onclick="switchTab('scan')" id="tab-scan" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-slate-600/50">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        识别
                     </button>
-                </div>
-
-                <!-- 二维码显示区：强制白底以保证可读性 -->
-                <div class="h-[240px] flex-shrink-0 bg-white dark:bg-white/95 border-2 border-dashed border-lavender-200 dark:border-slate-600 rounded-2xl p-4 flex items-center justify-center transition-all hover:border-lavender-300 dark:hover:border-lavender-500/50">
-                    <div id="genPlaceholder" class="text-center">
-                        <div class="w-16 h-16 bg-lavender-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-8 h-8 text-lavender-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                            </svg>
-                        </div>
-                        <p class="text-base text-lavender-400 font-bold tracking-wide">输入内容后点击生成</p>
-                    </div>
-                    <div id="qrcode" class="hidden shadow-xl p-3 bg-white rounded-xl"></div>
                 </div>
             </div>
 
-            <!-- Panel 2: 识别面板 -->
-            <div id="panel-scan" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-full opacity-0 pointer-events-none">
-                
-                <!-- 拖拽上传区域 -->
-                <div class="flex-shrink-0 space-y-3 mb-4">
-                    <label class="block group cursor-pointer">
-                        <div id="dropZone" class="relative h-36 border-2 border-dashed border-lavender-300 dark:border-slate-600 rounded-2xl bg-lavender-50/50 dark:bg-slate-700/30 hover:bg-lavender-50 dark:hover:bg-slate-700/50 hover:border-lavender-500 dark:hover:border-lavender-500/50 transition-all flex flex-col items-center justify-center text-center p-4 group-active:scale-[0.99]">
-                            <input type="file" id="fileInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)">
-                            <div class="w-12 h-12 bg-white dark:bg-slate-600 rounded-full shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6 text-lavender-500 dark:text-lavender-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            </div>
-                            <p class="text-xs font-bold text-gray-600 dark:text-gray-300">点击上传 / 拖拽文件</p>
-                            <p class="text-[10px] text-lavender-400 dark:text-gray-500 mt-1">支持 Ctrl+V 粘贴截图</p>
-                        </div>
-                    </label>
+            <!-- Panel Container -->
+            <div class="relative flex-1 w-full overflow-hidden">
+                <!-- 生成面板 -->
+                <div id="panel-generate" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-0">
+                    <div class="flex-grow flex flex-col min-h-0 mb-4">
+                        <textarea id="genInput" placeholder="在此粘贴文本、网址或配置信息..." class="w-full h-full p-4 text-sm bg-lavender-50/50 dark:bg-slate-700/30 border-2 border-transparent rounded-2xl outline-none resize-none focus:bg-white dark:focus:bg-slate-700 focus:border-lavender-400 dark:focus:border-lavender-500/50 focus:ring-4 focus:ring-lavender-100 dark:focus:ring-lavender-500/20 transition-all text-gray-600 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 custom-scrollbar"></textarea>
+                    </div>
                     
-                    <div id="fileNameDisplay" class="hidden items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs rounded-lg border border-indigo-100 dark:border-indigo-500/20">
-                        <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        <span class="truncate font-medium" id="fileNameText">image.png</span>
+                    <div class="grid grid-cols-3 gap-3 flex-shrink-0 mb-4">
+                        <button onclick="generateQRCode()" class="group col-span-2 bg-lavender-600 hover:bg-lavender-700 dark:bg-lavender-700 dark:hover:bg-lavender-600 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-lavender-500/30 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 transition-transform group-hover:scale-110 group-active:rotate-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                            </svg>
+                            生成
+                        </button>
+                        <button onclick="downloadQRCode()" id="downloadBtn" disabled class="col-span-1 bg-gray-100 text-gray-400 dark:bg-slate-700 dark:text-gray-400 font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed group-enabled:bg-emerald-500 group-enabled:text-white group-enabled:shadow-lg group-enabled:shadow-emerald-500/25 group-enabled:hover:bg-emerald-600 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            保存
+                        </button>
+                    </div>
+
+                    <div class="h-[240px] flex-shrink-0 bg-white dark:bg-white/95 border-2 border-dashed border-lavender-200 dark:border-slate-600 rounded-2xl p-4 flex items-center justify-center transition-all hover:border-lavender-300 dark:hover:border-lavender-500/50">
+                        <div id="genPlaceholder" class="text-center">
+                            <div class="w-16 h-16 bg-lavender-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-8 h-8 text-lavender-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                                </svg>
+                            </div>
+                            <p class="text-base text-lavender-400 font-bold tracking-wide">输入内容后点击生成</p>
+                        </div>
+                        <div id="qrcode" class="hidden shadow-xl p-3 bg-white rounded-xl"></div>
                     </div>
                 </div>
 
-                <!-- 识别结果区域 -->
-                <div class="flex-grow flex flex-col min-h-0 relative">
-                    <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider ml-1 mb-2 flex items-center gap-2 flex-shrink-0">
-                        识别结果
-                        <span id="scanStatus" class="hidden text-red-500 font-normal normal-case ml-auto text-[10px] bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">未发现二维码</span>
-                    </label>
-                    
-                    <div class="relative flex-1 h-full">
-                        <textarea id="scanResult" readonly placeholder="识别内容显示区..." class="w-full h-full p-4 text-sm bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600 rounded-2xl resize-none text-gray-700 dark:text-gray-300 focus:bg-white dark:focus:bg-slate-700 focus:border-lavender-300 dark:focus:border-lavender-500/50 outline-none transition-colors font-mono leading-relaxed custom-scrollbar"></textarea>
-                        
-                        <button onclick="copyResult()" id="copyBtn" class="absolute bottom-3 right-3 p-2 bg-white dark:bg-slate-600 shadow-md border border-gray-100 dark:border-slate-500 rounded-xl hover:text-lavender-600 dark:hover:text-white hover:shadow-lg text-gray-400 dark:text-gray-400 transition-all active:scale-90" title="复制结果">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        </button>
+                <!-- 识别面板 -->
+                <div id="panel-scan" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-full opacity-0 pointer-events-none">
+                    <div class="flex-shrink-0 space-y-3 mb-4">
+                        <label class="block group cursor-pointer">
+                            <div id="dropZone" class="relative h-36 border-2 border-dashed border-lavender-300 dark:border-slate-600 rounded-2xl bg-lavender-50/50 dark:bg-slate-700/30 hover:bg-lavender-50 dark:hover:bg-slate-700/50 hover:border-lavender-500 dark:hover:border-lavender-500/50 transition-all flex flex-col items-center justify-center text-center p-4 group-active:scale-[0.99]">
+                                <input type="file" id="fileInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)">
+                                <div class="w-12 h-12 bg-white dark:bg-slate-600 rounded-full shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                    <svg class="w-6 h-6 text-lavender-500 dark:text-lavender-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                </div>
+                                <p class="text-xs font-bold text-gray-600 dark:text-gray-300">点击上传 / 拖拽文件</p>
+                                <p class="text-[10px] text-lavender-400 dark:text-gray-500 mt-1">支持 Ctrl+V 粘贴截图</p>
+                            </div>
+                        </label>
+                        <div id="fileNameDisplay" class="hidden items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs rounded-lg border border-indigo-100 dark:border-indigo-500/20">
+                            <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <span class="truncate font-medium" id="fileNameText">image.png</span>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow flex flex-col min-h-0 relative">
+                        <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider ml-1 mb-2 flex items-center gap-2 flex-shrink-0">
+                            识别结果
+                            <span id="scanStatus" class="hidden text-red-500 font-normal normal-case ml-auto text-[10px] bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">未发现二维码</span>
+                        </label>
+                        <div class="relative flex-1 h-full">
+                            <textarea id="scanResult" readonly placeholder="识别内容显示区..." class="w-full h-full p-4 text-sm bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600 rounded-2xl resize-none text-gray-700 dark:text-gray-300 focus:bg-white dark:focus:bg-slate-700 focus:border-lavender-300 dark:focus:border-lavender-500/50 outline-none transition-colors font-mono leading-relaxed custom-scrollbar"></textarea>
+                            <button onclick="copyResult()" id="copyBtn" class="absolute bottom-3 right-3 p-2 bg-white dark:bg-slate-600 shadow-md border border-gray-100 dark:border-slate-500 rounded-xl hover:text-lavender-600 dark:hover:text-white hover:shadow-lg text-gray-400 dark:text-gray-400 transition-all active:scale-90" title="复制结果">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- 底部版权 -->
+            <footer class="p-4 text-center mt-auto flex-shrink-0">
+                <p class="text-[10px] font-medium text-gray-400 dark:text-gray-600 tracking-wider uppercase">
+                    由 <span class="text-lavender-500 dark:text-lavender-400 font-bold">[Gemini 3 Pro 生成]</span>
+                </p>
+            </footer>
+        </div>
+
+        <!-- ================= 历史记录全屏面板 (Overlay) ================= -->
+        <!-- z-50 确保覆盖主内容区 -->
+        <div id="history-panel" class="absolute inset-0 z-50 bg-white dark:bg-darkcard flex flex-col translate-y-full transition-transform duration-300">
+            <!-- 历史面板头部 -->
+            <div class="p-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-slate-800/50 backdrop-blur-md z-10">
+                <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <span class="p-1.5 bg-lavender-100 dark:bg-lavender-900/30 rounded-lg text-lavender-600 dark:text-lavender-400">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </span>
+                    历史记录
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium">清空</button>
+                    <button onclick="toggleHistory(false)" class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 历史记录列表 -->
+            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-gray-50/50 dark:bg-transparent">
+                <!-- JS 动态生成 -->
             </div>
         </div>
 
-        <!-- 底部版权 -->
-        <footer class="p-4 text-center mt-auto flex-shrink-0 z-20">
-            <p class="text-[10px] font-medium text-gray-400 dark:text-gray-600 tracking-wider uppercase">
-                由 <span class="text-lavender-500 dark:text-lavender-400 font-bold">[Gemini 3 Pro 生成]</span>
-            </p>
-        </footer>
     </main>
 
     <!-- 📚 核心库 -->
@@ -194,16 +217,178 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
-        // === 深色模式逻辑 ===
+        // === 工具函数 ===
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = '', icon = '';
+            
+            if (type === 'success') {
+                bgClass = 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900 shadow-xl';
+                icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+            } else if (type === 'error') {
+                bgClass = 'bg-white dark:bg-slate-700 text-red-500 dark:text-red-400 border border-red-100 dark:border-red-900 shadow-xl';
+                icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+            } else {
+                bgClass = 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-slate-600 shadow-xl';
+                icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+            }
+
+            toast.className = `${bgClass} px-4 py-3 rounded-xl flex items-center gap-3 transform -translate-y-4 opacity-0 transition-all duration-300 w-auto min-w-[180px] justify-center font-medium backdrop-blur-sm pointer-events-auto`;
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('-translate-y-4', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // === 核心逻辑: 历史记录 + 图片缓存 ===
+        const MAX_HISTORY = 50;
+
+        function getHistory() {
+            try {
+                return JSON.parse(localStorage.getItem('qr_history_v2') || '[]');
+            } catch(e) { return []; }
+        }
+
+        function saveHistory(content, type, thumbBase64 = null) {
+            if(!content) return;
+            let history = getHistory();
+            
+            // 去重: 如果最新一条内容相同，则只更新时间，不新增
+            if (history.length > 0 && history[0].content === content && history[0].type === type) {
+                history[0].time = new Date().toLocaleString();
+            } else {
+                const newItem = {
+                    id: Date.now(),
+                    content: content,
+                    type: type, // 'gen' | 'scan'
+                    thumb: thumbBase64, // 缓存的缩略图 (base64)
+                    time: new Date().toLocaleString()
+                };
+                history.unshift(newItem);
+            }
+
+            // 容量控制
+            if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+            
+            try {
+                localStorage.setItem('qr_history_v2', JSON.stringify(history));
+                renderHistory(); // 实时刷新UI
+            } catch(e) {
+                console.error("Storage full, clearing old items");
+                // 空间不足时，暴力删除一半旧数据再试
+                history = history.slice(0, Math.floor(MAX_HISTORY / 2));
+                try {
+                    localStorage.setItem('qr_history_v2', JSON.stringify(history));
+                } catch(retryE) {
+                    showToast("本地存储空间不足，无法保存记录", "error");
+                }
+            }
+        }
+
+        function clearHistory() {
+            if(confirm('确定要清空所有历史记录吗？')) {
+                localStorage.removeItem('qr_history_v2');
+                renderHistory();
+                showToast('历史记录已清空', 'success');
+            }
+        }
+
+        function toggleHistory(show) {
+            const panel = document.getElementById('history-panel');
+            if (show) {
+                renderHistory();
+                panel.classList.remove('translate-y-full');
+            } else {
+                panel.classList.add('translate-y-full');
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const history = getHistory();
+            
+            if (history.length === 0) {
+                list.innerHTML = `<div class="text-center text-gray-400 dark:text-gray-600 text-sm mt-20 flex flex-col items-center gap-3">
+                    <svg class="w-12 h-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p>暂无历史记录</p>
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = history.map(item => {
+                const isGen = item.type === 'gen';
+                // 样式差异化配置
+                const cardClass = isGen 
+                    ? 'border-l-4 border-l-lavender-400 dark:border-l-lavender-500 bg-white dark:bg-slate-800' 
+                    : 'border-l-4 border-l-emerald-400 dark:border-l-emerald-500 bg-white dark:bg-slate-800';
+                
+                const iconBg = isGen ? 'bg-lavender-50 text-lavender-600 dark:bg-lavender-900/20 dark:text-lavender-300' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300';
+                
+                const typeLabel = isGen ? '生成记录' : '识别记录';
+                
+                // 缩略图 HTML
+                const thumbHtml = !isGen && item.thumb 
+                    ? `<div class="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-100 dark:bg-slate-700 overflow-hidden border border-gray-200 dark:border-slate-600 mr-3">
+                         <img src="${item.thumb}" class="w-full h-full object-cover" alt="thumb">
+                       </div>`
+                    : `<div class="flex-shrink-0 w-10 h-10 rounded-full ${iconBg} flex items-center justify-center mr-3">
+                         ${isGen 
+                            ? '<svg class="w-5 h-5" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M432 560a32 32 0 0 1 32 32v288a32 32 0 0 1-32 32h-288a32 32 0 0 1-32-32v-288a32 32 0 0 1 32-32h288z m224 240c8.832 0 16 7.168 16 16V896a16 16 0 0 1-16 16H576a16 16 0 0 1-16-16v-80c0-8.832 7.168-16 16-16h80z m248.021333 0c8.832 0 16 7.168 16 16V896a16 16 0 0 1-16 16h-80a16 16 0 0 1-16-16v-80c0-8.832 7.125333-16 16-16h80zM399.957333 624h-224v224h224v-224z m384 48c8.832 0 16 7.168 16 16v96a16 16 0 0 1-16 16h-96a16 16 0 0 1-16-16v-96c0-8.832 7.168-16 16-16h96zM320 688c8.832 0 16 7.168 16 16V768a16 16 0 0 1-16 16H256A16 16 0 0 1 240 768v-64c0-8.832 7.168-16 16-16h64z m336-128c8.832 0 16 7.168 16 16v80a16 16 0 0 1-16 16H576a16 16 0 0 1-16-16V576c0-8.832 7.168-16 16-16h80z m248.021333 0c8.832 0 16 7.168 16 16v80a16 16 0 0 1-16 16h-80a16 16 0 0 1-16-16V576c0-8.832 7.125333-16 16-16h80z m-472.021333-448a32 32 0 0 1 32 32v288a32 32 0 0 1-32 32h-288a32 32 0 0 1-32-32v-288a32 32 0 0 1 32-32h288z m448 0a32 32 0 0 1 32 32v288a32 32 0 0 1-32 32h-288a32 32 0 0 1-32-32v-288a32 32 0 0 1 32-32h288z m-480 64h-224v224h224v-224z m448 0h-224v224h224v-224zM320 240c8.832 0 16 7.168 16 16v64a16 16 0 0 1-16 16H256a16 16 0 0 1-16-16V256c0-8.832 7.168-16 16-16h64z m448 0c8.832 0 16 7.168 16 16v64a16 16 0 0 1-16 16h-64a16 16 0 0 1-16-16V256c0-8.832 7.168-16 16-16H768z"></path></svg>' 
+                            : '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'}
+                       </div>`;
+
+                return `
+                <div class="p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 dark:border-slate-700/50 ${cardClass} group">
+                    <div class="flex items-start">
+                        ${thumbHtml}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold uppercase tracking-wider ${isGen ? 'text-lavender-500' : 'text-emerald-500'}">${typeLabel}</span>
+                                <span class="text-[10px] text-gray-400 font-mono">${item.time.split(' ')[1] || item.time}</span>
+                            </div>
+                            <div class="text-sm text-gray-700 dark:text-gray-200 break-all line-clamp-2 font-mono leading-relaxed select-all" title="${item.content}">${item.content}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-t border-gray-50 dark:border-white/5 flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button onclick="copyText('${item.content.replace(/'/g, "\\'")}')" class="text-xs flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> 复制
+                        </button>
+                        ${isGen ? `
+                        <button onclick="fillGen('${item.content.replace(/'/g, "\\'")}')" class="text-xs flex items-center gap-1.5 px-2 py-1 rounded hover:bg-lavender-50 dark:hover:bg-slate-700 text-lavender-500 hover:text-lavender-700 dark:text-lavender-400 transition-colors font-medium">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg> 填充
+                        </button>` : ''}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板', 'success'))
+                .catch(() => showToast('复制失败', 'error'));
+        }
+
+        function fillGen(text) {
+            document.getElementById('genInput').value = text;
+            toggleHistory(false); 
+            switchTab('generate');
+            showToast('内容已填充', 'success');
+        }
+
+        // === 基础功能: Theme / Tabs / Gen / Scan ===
         function initTheme() {
-            // 读取本地存储或系统偏好
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
         }
-        
         function toggleTheme() {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark');
@@ -213,16 +398,13 @@
                 localStorage.theme = 'dark';
             }
         }
-        // 初始化运行
         initTheme();
 
-        // === Tab 切换逻辑 ===
         function switchTab(tab) {
             const genPanel = document.getElementById('panel-generate');
             const scanPanel = document.getElementById('panel-scan');
             const genTab = document.getElementById('tab-generate');
             const scanTab = document.getElementById('tab-scan');
-
             const activeClass = "text-lavender-700 dark:text-lavender-300 bg-white dark:bg-slate-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 font-bold z-10";
             const inactiveClass = "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-slate-600/50 z-0";
 
@@ -239,7 +421,6 @@
             }
         }
 
-        // === 生成功能 ===
         let qrcodeObj = null;
         function generateQRCode() {
             const text = document.getElementById("genInput").value.trim();
@@ -247,8 +428,8 @@
             const placeholder = document.getElementById("genPlaceholder");
             const dlBtn = document.getElementById("downloadBtn");
 
-            if (!text) { alert("✨ 请输入内容后再生成"); return; }
-            if (typeof QRCode === 'undefined') { alert("❌ 核心库加载失败，请检查网络"); return; }
+            if (!text) { showToast("请输入内容后再生成", 'error'); return; }
+            if (typeof QRCode === 'undefined') { showToast("核心库加载失败，请检查网络", 'error'); return; }
 
             container.innerHTML = "";
             placeholder.classList.add("hidden");
@@ -256,7 +437,6 @@
             dlBtn.disabled = true;
             dlBtn.classList.remove("group-enabled");
 
-            // 限制最大尺寸
             const size = Math.min(container.parentElement.clientWidth - 32, 210);
 
             setTimeout(() => {
@@ -268,8 +448,10 @@
                     });
                     dlBtn.disabled = false;
                     dlBtn.classList.add("group-enabled");
+                    saveHistory(text, 'gen');
+                    showToast("生成成功", 'success');
                 } catch(e) {
-                    alert("生成失败: " + e.message);
+                    showToast("生成失败: " + e.message, 'error');
                     placeholder.classList.remove("hidden");
                     container.classList.add("hidden");
                 }
@@ -280,9 +462,7 @@
             const img = document.querySelector("#qrcode img");
             const canvas = document.querySelector("#qrcode canvas");
             let url = null;
-            if (canvas) url = canvas.toDataURL("image/png");
-            else if (img) url = img.src;
-
+            if (canvas) url = canvas.toDataURL("image/png"); else if (img) url = img.src;
             if(url) {
                 const link = document.createElement('a');
                 link.download = `QR_${new Date().toISOString().slice(0,10)}.png`;
@@ -291,18 +471,14 @@
             }
         }
 
-        // === 识别功能 ===
         let timer = null;
         function updateFileName(name) {
             const display = document.getElementById('fileNameDisplay');
             const text = document.getElementById('fileNameText');
             display.classList.remove('hidden');
-            display.classList.remove('animate-pulse'); 
-            
-            // 清理之前的定时器，防止闪烁
+            display.classList.remove('animate-pulse');
             if (timer) clearTimeout(timer);
-            
-            void display.offsetWidth; // trigger reflow
+            void display.offsetWidth;
             display.classList.add('animate-pulse');
             timer = setTimeout(() => display.classList.remove('animate-pulse'), 1000);
             text.textContent = name;
@@ -310,17 +486,14 @@
 
         function handleFileSelect(input) {
             if (input.files && input.files[0]) {
-                const file = input.files[0];
-                updateFileName(file.name);
-                processImage(file);
+                updateFileName(input.files[0].name);
+                processImage(input.files[0]);
                 input.value = ''; 
             }
         }
 
         document.addEventListener('paste', (event) => {
-            // Bug Fix: 只有在识别面板显示时才响应粘贴，防止与生成框冲突
             if (document.getElementById('panel-scan').classList.contains('opacity-0')) return;
-            
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
             for (let index in items) {
                 const item = items[index];
@@ -329,8 +502,7 @@
                     const timestamp = new Date().toLocaleTimeString('zh-CN', {hour12:false}).replace(/:/g, '');
                     updateFileName(`粘贴截图_${timestamp}.png`);
                     processImage(blob);
-                    event.preventDefault(); 
-                    break;
+                    event.preventDefault(); break;
                 }
             }
         });
@@ -357,51 +529,53 @@
 
             try {
                 const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert",
-                });
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                
                 if (code) {
                     resultEl.value = code.data;
                     statusEl.classList.add('hidden');
+                    
+                    // === 生成缩略图缓存 ===
+                    const thumbCanvas = document.createElement('canvas');
+                    const targetW = 80; // 缩略图宽度
+                    const scale = targetW / img.width;
+                    thumbCanvas.width = targetW;
+                    thumbCanvas.height = img.height * scale;
+                    const tCtx = thumbCanvas.getContext('2d');
+                    tCtx.drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
+                    const thumbBase64 = thumbCanvas.toDataURL('image/jpeg', 0.5); // 低质量压缩
+                    
+                    saveHistory(code.data, 'scan', thumbBase64);
+                    showToast("识别成功", 'success');
                 } else {
                     statusEl.textContent = "未发现二维码";
                     statusEl.classList.remove('hidden');
                     resultEl.value = "";
+                    showToast("未发现二维码", 'error');
                 }
             } catch (e) {
                 console.error(e);
                 statusEl.textContent = "解析出错";
                 statusEl.classList.remove('hidden');
+                showToast("解析出错", 'error');
             }
         }
 
         function copyResult() {
             const res = document.getElementById('scanResult');
-            if(!res.value) return;
+            if(!res.value) { showToast('没有可复制的内容', 'info'); return; }
             res.select();
             document.execCommand("copy");
-            const btn = document.getElementById('copyBtn');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = `<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
-            btn.classList.add('border-emerald-200', 'dark:border-emerald-500/50', 'bg-emerald-50', 'dark:bg-emerald-900/30');
-            setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.classList.remove('border-emerald-200', 'dark:border-emerald-500/50', 'bg-emerald-50', 'dark:bg-emerald-900/30');
-            }, 1500);
+            showToast('识别结果已复制', 'success');
         }
 
-        // 拖拽
         const dropZone = document.getElementById('dropZone');
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
-            dropZone.addEventListener(e, (ev) => { ev.preventDefault(); ev.stopPropagation(); }, false);
-        });
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, (ev) => { ev.preventDefault(); ev.stopPropagation(); }, false));
         ['dragenter', 'dragover'].forEach(e => dropZone.classList.add('scale-[1.02]'));
         ['dragleave', 'drop'].forEach(e => dropZone.classList.remove('scale-[1.02]'));
         dropZone.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
-            if(dt.files && dt.files[0]) {
-                handleFileSelect({files: dt.files});
-            }
+            if(dt.files && dt.files[0]) handleFileSelect({files: dt.files});
         }, false);
     </script>
 </body>
