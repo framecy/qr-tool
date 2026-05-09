@@ -3,32 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>二维码小工具</title>
-    
-    <!-- 引入 Tailwind CSS -->
+    <title>二维码工具</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 CryptoJS 用于加密 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    
-    <!-- 配置 Tailwind 主题 -->
+
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        lavender: {
-                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
-                            400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
-                            800: '#5b21b6', 900: '#4c1d95',
+                        brand: {
+                            DEFAULT: '#4f46e5',
+                            hover: '#4338ca',
+                            light: '#eef2ff',
+                            dark: '#3730a3'
                         },
-                        darkbg: '#0f172a', darkcard: '#1e293b',
+                        zinc: { 950: '#09090b' }
+                    },
+                    borderRadius: {
+                        '4xl': '2rem',
+                        '5xl': '2.5rem',
                     },
                     boxShadow: {
-                        'soft': '0 20px 60px -15px rgba(139, 92, 246, 0.2)',
-                    },
-                    animation: {
-                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                        'soft': '0 20px 50px -12px rgba(0, 0, 0, 0.08)',
+                        'soft-dark': '0 20px 50px -12px rgba(0, 0, 0, 0.4)',
                     },
                     keyframes: {
                         shake: {
@@ -36,7 +36,15 @@
                             '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
                             '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
                             '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+                        },
+                        'slide-up': {
+                            from: { transform: 'translateY(16px)', opacity: '0' },
+                            to:   { transform: 'translateY(0)',   opacity: '1' }
                         }
+                    },
+                    animation: {
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                        'slide-up': 'slide-up 0.4s cubic-bezier(0, 0, 0.2, 1)',
                     }
                 }
             }
@@ -44,466 +52,714 @@
     </script>
 
     <style>
-        * { -webkit-tap-highlight-color: transparent; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         input[type="file"]::file-selector-button { display: none; }
-        
-        body, div, textarea, button, svg, span, h1, p, img, h3 {
-            transition-property: color, background-color, border-color, transform, opacity, fill, stroke;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 300ms;
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .dark body { background-color: #000000; color: #f1f5f9; }
+
+        .tab-indicator {
+            position: absolute;
+            bottom: 4px;
+            height: calc(100% - 8px);
+            background: white;
+            border-radius: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            z-index: 0;
+        }
+        .dark .tab-indicator { background: #27272a; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+
+        .slim-scroll::-webkit-scrollbar { width: 5px; }
+        .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+        .slim-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 99px; }
+        .dark .slim-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); }
+
+        .focus-ring:focus-within {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+            border-color: #4f46e5;
+        }
+        .dark .focus-ring:focus-within {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+            border-color: #6366f1;
         }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #ddd6fe; border-radius: 20px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
+        #qrcode canvas { display: block; margin: 0 auto; border-radius: 16px; }
+        #qrcode img    { display: block; margin: 0 auto; border-radius: 16px; }
+        #qrcode svg    { display: block; margin: 0 auto; border-radius: 16px; width: 220px; height: 220px; }
+
+        .panel-hidden  { opacity: 0; transform: translateY(10px); pointer-events: none; }
+        .panel-visible { opacity: 1; transform: translateY(0);    pointer-events: auto; }
+
+        body, main, button, textarea, input, div {
+            transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+            transition-duration: 250ms;
+        }
+
+        /* color swatch selected ring */
+        .swatch-active {
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #4f46e5 !important;
+        }
+        .dark .swatch-active {
+            box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #6366f1 !important;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-lavender-50 via-purple-50 to-indigo-100 dark:from-darkbg dark:via-slate-900 dark:to-slate-800 h-screen w-screen overflow-hidden flex flex-col items-center justify-center text-gray-700 dark:text-gray-200 font-sans">
 
-    <!-- Toast 容器 -->
-    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-xs items-center"></div>
+<body class="min-h-screen w-screen overflow-hidden flex items-center justify-center bg-zinc-50 dark:bg-black transition-colors duration-500">
 
-    <!-- 顶部功能区 (历史 & 主题) -->
-    <div class="absolute top-4 right-4 z-50 flex gap-3">
-        <!-- 历史记录按钮 -->
-        <button onclick="toggleHistory(true)" class="p-2.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 text-gray-600 dark:text-lavender-300 border border-white/20 dark:border-white/10 transition-transform" title="历史记录">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div id="toast-container" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex flex-col-reverse gap-3 pointer-events-none items-center w-full max-w-xs"></div>
+
+    <!-- 顶部操作 -->
+    <div class="fixed top-8 right-8 z-50 flex gap-4 sm:absolute">
+        <button onclick="toggleHistory(true)" title="历史记录"
+            class="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-brand hover:border-brand shadow-sm active:scale-90 transition-all duration-200">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
         </button>
-
-        <!-- 深色模式切换 -->
-        <button onclick="toggleTheme()" class="p-2.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 text-gray-600 dark:text-yellow-400 border border-white/20 dark:border-white/10 transition-transform" title="切换深色模式">
-            <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+        <button onclick="toggleTheme()" title="切换主题"
+            class="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-brand hover:border-brand shadow-sm active:scale-90 transition-all duration-200">
+            <svg id="icon-sun" class="w-6 h-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <svg id="icon-moon" class="w-6 h-6 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
         </button>
     </div>
 
-    <!-- 主容器 Card -->
-    <main class="bg-white/90 dark:bg-darkcard/90 backdrop-blur-2xl shadow-soft dark:shadow-none border border-white/60 dark:border-white/5 flex flex-col transition-all duration-300 relative overflow-hidden
+    <!-- 主卡片 -->
+    <main class="bg-white dark:bg-zinc-950 flex flex-col relative overflow-hidden
                  w-full h-full rounded-none
-                 sm:w-[460px] sm:h-[680px] sm:rounded-[2.5rem]">
-        
-        <!-- 头部标题 -->
-        <header class="pt-8 pb-4 px-8 text-center flex-shrink-0">
-            <h1 class="text-xl font-extrabold tracking-tight text-gray-800 dark:text-white">
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-lavender-600 to-indigo-600 dark:from-lavender-400 dark:to-indigo-400">
-                    一个纯前端实现的二维码小工具
-                </span>
-            </h1>
-        </header>
+                 sm:w-[480px] sm:h-[780px] sm:rounded-5xl sm:shadow-soft sm:dark:shadow-soft-dark border border-zinc-200 dark:border-zinc-800 transition-all duration-300">
 
-        <!-- 顶部 Tab 切换 -->
-        <div class="px-8 pb-2 flex-shrink-0">
-            <div class="p-1.5 bg-gray-100/80 dark:bg-slate-700/50 rounded-2xl grid grid-cols-2 gap-1 font-medium text-sm relative shadow-inner dark:shadow-none border border-transparent dark:border-white/5">
-                <button onclick="switchTab('generate')" id="tab-generate" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-lavender-700 dark:text-lavender-300 bg-white dark:bg-slate-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 font-bold">
-                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                    </svg>
+        <!-- Tab 栏 -->
+        <div class="flex-shrink-0 px-8 pt-8 pb-4">
+            <div class="relative bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-2xl flex items-center" id="tab-bar">
+                <button onclick="switchTab('generate')" id="tab-generate"
+                    class="relative z-10 flex-1 py-3 text-sm font-bold transition-all duration-300 outline-none">
                     生成
                 </button>
-                <button onclick="switchTab('scan')" id="tab-scan" class="relative z-10 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-slate-600/50">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <button onclick="switchTab('scan')" id="tab-scan"
+                    class="relative z-10 flex-1 py-3 text-sm font-bold text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all duration-300 outline-none">
                     识别
                 </button>
+                <div class="tab-indicator" id="tab-indicator"></div>
             </div>
         </div>
 
-        <!-- Panel Container -->
+        <!-- Panel 容器 -->
         <div class="relative flex-1 w-full overflow-hidden">
+
             <!-- 生成面板 -->
-            <div id="panel-generate" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-0">
-                <div class="flex-grow flex flex-col min-h-0 mb-4">
-                    <textarea id="genInput" placeholder="在此粘贴文本、网址或配置信息..." class="w-full h-full p-4 text-sm bg-lavender-50/50 dark:bg-slate-700/30 border-2 border-transparent rounded-2xl outline-none resize-none focus:bg-white dark:focus:bg-slate-700 focus:border-lavender-400 dark:focus:border-lavender-500/50 focus:ring-4 focus:ring-lavender-100 dark:focus:ring-lavender-500/20 transition-all text-gray-600 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 custom-scrollbar"></textarea>
-                </div>
-                
-                <!-- 按钮组 -->
-                <div class="grid grid-cols-4 gap-3 flex-shrink-0 mb-4">
-                    <button onclick="generateQRCode()" class="group col-span-2 bg-lavender-600 hover:bg-lavender-700 dark:bg-lavender-700 dark:hover:bg-lavender-600 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-lavender-500/30 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5 transition-transform group-hover:scale-110 group-active:rotate-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                        </svg>
-                        生成
-                    </button>
-                    
-                    <button onclick="openShareModal()" class="col-span-1 bg-white dark:bg-slate-700 text-indigo-500 dark:text-indigo-400 font-semibold py-3.5 rounded-xl shadow-sm border border-indigo-100 dark:border-slate-600 flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-indigo-50 dark:hover:bg-slate-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                        <span class="hidden sm:inline">分享</span>
-                    </button>
+            <div id="panel-generate" class="absolute inset-0 flex flex-col px-8 pb-8 pt-2 gap-5 transition-all duration-400 ease-out panel-visible">
 
-                    <button onclick="downloadQRCode()" id="downloadBtn" disabled class="col-span-1 bg-gray-100 text-gray-400 dark:bg-slate-700 dark:text-gray-400 font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed group-enabled:bg-emerald-500 group-enabled:text-white group-enabled:shadow-lg group-enabled:shadow-emerald-500/25 group-enabled:hover:bg-emerald-600 transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        <span class="hidden sm:inline">保存</span>
-                    </button>
+                <!-- 输入区 -->
+                <div class="flex-1 min-h-0 relative focus-ring rounded-4xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 transition-all">
+                    <textarea id="genInput"
+                        placeholder="粘贴文本、网址或任意内容…"
+                        class="w-full h-full resize-none text-lg leading-relaxed p-7 bg-transparent text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 slim-scroll outline-none">
+                    </textarea>
                 </div>
 
-                <div class="h-[240px] flex-shrink-0 bg-white dark:bg-white/95 border-2 border-dashed border-lavender-200 dark:border-slate-600 rounded-2xl p-4 flex items-center justify-center transition-all hover:border-lavender-300 dark:hover:border-lavender-500/50">
-                    <div id="genPlaceholder" class="text-center">
-                        <div class="w-16 h-16 bg-lavender-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-8 h-8 text-lavender-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                <!-- QR 输出 + 操作区 -->
+                <div class="flex-shrink-0 flex flex-col gap-4">
+
+                    <!-- QR 展示框 -->
+                    <div id="qr-wrapper" class="relative w-full aspect-square max-h-[220px] rounded-4xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden group">
+                        <div id="genPlaceholder" class="flex flex-col items-center gap-4 text-zinc-300 dark:text-zinc-700 select-none">
+                            <svg class="w-16 h-16 opacity-40 group-hover:scale-110 transition-transform duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/>
+                                <path d="M14 14h2v2h-2zM18 14h3v2h-3zM14 18h2v3h-2zM18 18h1v1h-1zM20 20h1v1h-1z" stroke-linecap="round"/>
                             </svg>
+                            <span class="text-sm font-bold tracking-tight">输入内容生成二维码</span>
                         </div>
-                        <p class="text-base text-lavender-400 font-bold tracking-wide">输入内容后点击生成</p>
+                        <div id="qrcode" class="hidden p-5 bg-white rounded-4xl shadow-lg transition-all duration-500 scale-90 opacity-0"></div>
+
+                        <!-- QR actions -->
+                        <div id="qr-actions" class="hidden absolute top-3 right-3 flex flex-col gap-2">
+                            <button onclick="openShareModal()" title="分享"
+                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-brand shadow-sm active:scale-90 transition-all">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                                </svg>
+                            </button>
+                            <button onclick="downloadQRCode()" id="downloadBtn" disabled title="下载"
+                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 [&:not(:disabled)]:hover:text-brand shadow-sm active:scale-90 transition-all">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <div id="qrcode" class="hidden shadow-xl p-3 bg-white rounded-xl"></div>
+
+                    <!-- 配色 & 格式 -->
+                    <div class="flex items-center justify-between px-1">
+                        <!-- Color swatches -->
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-600">配色</span>
+                            <div id="color-swatches" class="flex gap-2"></div>
+                        </div>
+                        <!-- Format toggle -->
+                        <div class="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
+                            <button id="fmt-png" onclick="selectFormat('png')"
+                                class="px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 shadow-sm">PNG</button>
+                            <button id="fmt-svg" onclick="selectFormat('svg')"
+                                class="px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all text-zinc-400 dark:text-zinc-500 hover:text-zinc-600">SVG</button>
+                        </div>
+                    </div>
+
+                    <!-- 生成按钮 -->
+                    <button onclick="generateQRCode()"
+                        class="w-full py-5 rounded-3xl bg-brand hover:bg-brand-hover text-white font-extrabold text-lg flex items-center justify-center gap-3 shadow-lg shadow-brand/20 active:scale-[0.98] transition-all">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        生成二维码
+                    </button>
                 </div>
             </div>
 
             <!-- 识别面板 -->
-            <div id="panel-scan" class="absolute inset-0 p-8 pt-4 pb-4 flex flex-col h-full w-full transition-all duration-300 transform translate-x-full opacity-0 pointer-events-none">
-                <div class="flex-shrink-0 space-y-3 mb-4">
-                    <label class="block group cursor-pointer">
-                        <div id="dropZone" class="relative h-36 border-2 border-dashed border-lavender-300 dark:border-slate-600 rounded-2xl bg-lavender-50/50 dark:bg-slate-700/30 hover:bg-lavender-50 dark:hover:bg-slate-700/50 hover:border-lavender-500 dark:hover:border-lavender-500/50 transition-all flex flex-col items-center justify-center text-center p-4 group-active:scale-[0.99]">
-                            <input type="file" id="fileInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)">
-                            <div class="w-12 h-12 bg-white dark:bg-slate-600 rounded-full shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6 text-lavender-500 dark:text-lavender-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            </div>
-                            <p class="text-xs font-bold text-gray-600 dark:text-gray-300">点击上传 / 拖拽文件</p>
-                            <p class="text-[10px] text-lavender-400 dark:text-gray-500 mt-1">支持 Ctrl+V 粘贴截图</p>
+            <div id="panel-scan" class="absolute inset-0 flex flex-col px-8 pb-8 pt-2 gap-6 transition-all duration-400 ease-out panel-hidden">
+
+                <!-- 拖放区 -->
+                <label class="block cursor-pointer flex-shrink-0 group">
+                    <div id="dropZone" class="relative h-52 border-4 border-dashed border-zinc-200 dark:border-zinc-800 rounded-4xl bg-zinc-50 dark:bg-zinc-900/50 hover:border-brand dark:hover:border-brand hover:bg-brand/5 transition-all duration-300 flex flex-col items-center justify-center gap-5">
+                        <input type="file" id="fileInput" accept="image/*,image/svg+xml,.svg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)">
+                        <div class="w-18 h-18 w-[4.5rem] h-[4.5rem] rounded-3xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:shadow-lg transition-all duration-500">
+                            <svg class="w-9 h-9 text-zinc-400 group-hover:text-brand transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
                         </div>
-                    </label>
-                    <div id="fileNameDisplay" class="hidden items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs rounded-lg border border-indigo-100 dark:border-indigo-500/20">
-                        <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        <span class="truncate font-medium" id="fileNameText">image.png</span>
+                        <div class="text-center">
+                            <p class="text-base font-extrabold text-zinc-700 dark:text-zinc-200">点击上传或拖拽图片</p>
+                            <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-medium">支持 PNG / JPG / SVG · 粘贴截图 (Ctrl+V)</p>
+                        </div>
                     </div>
+                </label>
+
+                <!-- 文件名提示 -->
+                <div id="fileNameDisplay" class="hidden items-center gap-4 px-6 py-3.5 bg-brand/5 dark:bg-brand/10 border border-brand/20 rounded-2xl text-sm text-brand font-bold animate-slide-up">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span class="truncate" id="fileNameText">image.png</span>
                 </div>
 
-                <div class="flex-grow flex flex-col min-h-0 relative">
-                    <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider ml-1 mb-2 flex items-center gap-2 flex-shrink-0">
-                        识别结果
-                        <span id="scanStatus" class="hidden text-red-500 font-normal normal-case ml-auto text-[10px] bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">未发现二维码</span>
-                    </label>
-                    <div class="relative flex-1 h-full">
-                        <textarea id="scanResult" readonly placeholder="识别内容显示区..." class="w-full h-full p-4 text-sm bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600 rounded-2xl resize-none text-gray-700 dark:text-gray-300 focus:bg-white dark:focus:bg-slate-700 focus:border-lavender-300 dark:focus:border-lavender-500/50 outline-none transition-colors font-mono leading-relaxed custom-scrollbar"></textarea>
-                        <button onclick="copyResult()" id="copyBtn" class="absolute bottom-3 right-3 p-2 bg-white dark:bg-slate-600 shadow-md border border-gray-100 dark:border-slate-500 rounded-xl hover:text-lavender-600 dark:hover:text-white hover:shadow-lg text-gray-400 dark:text-gray-400 transition-all active:scale-90" title="复制结果">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <!-- 结果区 -->
+                <div class="flex-1 min-h-0 flex flex-col gap-3">
+                    <div class="flex items-center justify-between px-2">
+                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">识别结果</span>
+                        <span id="scanStatus" class="hidden text-xs text-red-500 font-black animate-pulse uppercase tracking-wider">未发现二维码</span>
+                    </div>
+                    <div class="flex-1 relative focus-ring rounded-4xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 transition-all overflow-hidden">
+                        <textarea id="scanResult" readonly
+                            placeholder="识别内容将显示在这里…"
+                            class="w-full h-full resize-none p-7 pr-20 text-base font-mono leading-relaxed bg-transparent text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 outline-none slim-scroll"></textarea>
+                        <button onclick="copyResult()" title="复制"
+                            class="absolute bottom-5 right-5 w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-brand hover:border-brand shadow-md active:scale-90 transition-all duration-300">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ================= 历史记录全屏面板 (Overlay) ================= -->
-        <div id="history-panel" class="absolute inset-0 z-50 bg-white dark:bg-darkcard flex flex-col translate-y-full transition-transform duration-300">
-            <div class="p-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-slate-800/50 backdrop-blur-md z-10">
-                <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <span class="p-1.5 bg-lavender-100 dark:bg-lavender-900/30 rounded-lg text-lavender-600 dark:text-lavender-400">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </span>
-                    历史记录
-                </h2>
-                <div class="flex gap-2">
-                    <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium">清空</button>
-                    <button onclick="toggleHistory(false)" class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        <!-- 历史记录面板 -->
+        <div id="history-panel" class="absolute inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950 translate-y-full transition-transform duration-500 ease-in-out">
+            <div class="flex items-center justify-between px-10 py-8 border-b border-zinc-100 dark:border-zinc-900 flex-shrink-0">
+                <h2 class="text-xl font-black text-zinc-800 dark:text-zinc-100">历史记录</h2>
+                <div class="flex items-center gap-4">
+                    <button onclick="clearHistory()" class="text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-xl transition-colors font-black">清空</button>
+                    <button onclick="toggleHistory(false)" class="w-12 h-12 flex items-center justify-center rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-400 transition-colors">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
                     </button>
                 </div>
             </div>
-            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-gray-50/50 dark:bg-transparent">
-                <!-- JS 动态生成 -->
-            </div>
+            <div id="history-list" class="flex-1 overflow-y-auto py-6 px-8 space-y-4 slim-scroll"></div>
         </div>
 
-        <!-- ================= 新版分享模态框 (Share Modal) ================= -->
-        <!-- flex items-center justify-center 确保模态框居中 -->
-        <div id="share-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center bg-black/30 dark:bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300">
-            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl w-[90%] max-w-sm transform scale-95 transition-transform duration-300 relative border border-white/20 dark:border-white/10" id="share-modal-card">
-                <!-- 标题 -->
-                <div class="text-center mb-6">
-                    <div class="w-12 h-12 bg-indigo-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-500 dark:text-indigo-400">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-800 dark:text-white">分享链接</h3>
+        <!-- 分享模态框 -->
+        <div id="share-modal" class="absolute inset-0 z-[70] hidden flex items-end sm:items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+            <div id="share-modal-card" class="bg-white dark:bg-zinc-950 w-full sm:w-[400px] rounded-t-5xl sm:rounded-5xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-10 transform translate-y-20 sm:scale-90 transition-all duration-400">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="text-xl font-black text-zinc-800 dark:text-zinc-100">分享链接</h3>
+                    <button onclick="closeShareModal()" class="w-10 h-10 flex items-center justify-center rounded-xl text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>
-
-                <!-- 交互区 -->
-                <div class="space-y-5">
-                    <!-- Switch 开关 -->
-                    <div class="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 p-3 rounded-xl border border-gray-100 dark:border-white/5 cursor-pointer" onclick="toggleShareEncryption()">
-                        <div class="flex flex-col">
-                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">启用密码保护</span>
-                            <span class="text-[10px] text-gray-400">开启后需凭密码访问</span>
-                        </div>
-                        <div class="relative w-11 h-6 transition-all duration-200 ease-in-out rounded-full bg-gray-200 dark:bg-gray-600" id="share-switch-bg">
-                            <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out translate-x-0" id="share-switch-circle"></div>
-                        </div>
-                    </div>
-
-                    <!-- 密码显示/修改区 (默认隐藏) -->
-                    <div id="share-pwd-container" class="hidden transition-all duration-300">
-                        <div class="relative group">
-                            <!-- 密码输入框 -->
-                            <input type="text" id="share-pwd-input" class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-indigo-100 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-center font-mono text-lg font-bold tracking-widest indent-[0.2em] text-indigo-600 dark:text-indigo-400 shadow-sm" maxlength="6">
-                            <div class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-indigo-500" onclick="regenerateKey()" title="重新生成">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <div class="space-y-6">
+                    <div class="p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 cursor-pointer select-none transition-all duration-200 hover:border-brand" onclick="toggleShareEncryption()">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-base font-extrabold text-zinc-700 dark:text-zinc-200">密码保护</p>
+                                <p class="text-xs text-zinc-400 mt-1 font-medium">开启后需凭 6 位密码访问</p>
+                            </div>
+                            <div class="relative w-14 h-8 flex-shrink-0 transition-all duration-300 rounded-full bg-zinc-200 dark:bg-zinc-800" id="share-switch-bg">
+                                <div class="absolute left-1.5 top-1.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out" id="share-switch-circle"></div>
                             </div>
                         </div>
-                        
-                        <!-- 新增：是否带密码复制选项 -->
-                        <div class="mt-3 flex items-center justify-center gap-2 cursor-pointer select-none" onclick="toggleIncludePwd()">
-                            <div id="include-pwd-checkbox" class="w-4 h-4 rounded border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 flex items-center justify-center transition-all">
-                                <svg class="w-3 h-3 text-white opacity-0 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                            </div>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">复制内容包含密码</span>
+                    </div>
+                    <div id="share-pwd-container" class="hidden animate-slide-up">
+                        <div class="relative">
+                            <input type="text" id="share-pwd-input" maxlength="6"
+                                class="w-full px-8 py-5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl focus:outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand text-center font-mono text-2xl font-black tracking-[0.5em] text-brand">
+                            <button onclick="regenerateKey()" title="刷新" class="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-brand transition-colors">
+                                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                            </button>
                         </div>
-                        
-                        <p class="text-[10px] text-center text-gray-400 mt-2">可修改，仅支持6位字符</p>
+                        <div class="mt-5 flex items-center gap-4 cursor-pointer select-none px-2" onclick="toggleIncludePwd()">
+                            <div id="include-pwd-checkbox" class="w-6 h-6 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-center transition-all duration-200">
+                                <svg class="w-4 h-4 text-white opacity-0 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <span class="text-sm font-bold text-zinc-500 dark:text-zinc-400">复制链接时附带密码</span>
+                        </div>
                     </div>
                 </div>
-
-                <!-- 底部按钮 -->
-                <div class="grid grid-cols-2 gap-3 mt-6">
-                    <button onclick="closeShareModal()" class="px-4 py-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 font-medium transition-colors border border-transparent">取消</button>
-                    <button onclick="confirmShare()" class="px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95">复制链接</button>
+                <div class="grid grid-cols-2 gap-4 mt-10">
+                    <button onclick="closeShareModal()" class="py-5 rounded-3xl text-base text-zinc-500 dark:text-zinc-400 font-extrabold hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">取消</button>
+                    <button onclick="confirmShare()" class="py-5 rounded-3xl text-base bg-brand hover:bg-brand-hover text-white font-black shadow-lg shadow-brand/20 active:scale-[0.97] transition-all">复制链接</button>
                 </div>
             </div>
         </div>
 
-        <!-- ================= 解密输入模态框 (Decryption Modal) ================= -->
-        <!-- flex items-center justify-center 确保模态框居中 -->
-        <div id="decrypt-modal" class="fixed inset-0 z-[80] hidden flex items-center justify-center bg-black/30 dark:bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300">
-            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl w-[90%] max-w-sm transform scale-95 transition-transform duration-300 relative border border-white/20 dark:border-white/10" id="decrypt-modal-card">
-                <div class="text-center mb-5">
-                    <div class="w-12 h-12 bg-lavender-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3 text-lavender-500 dark:text-lavender-400">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-800 dark:text-white">受保护的链接</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">请输入密码以查看内容</p>
+        <!-- 解密模态框 -->
+        <div id="decrypt-modal" class="absolute inset-0 z-[80] hidden flex items-end sm:items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+            <div id="decrypt-modal-card" class="bg-white dark:bg-zinc-950 w-full sm:w-[400px] rounded-t-5xl sm:rounded-5xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-12 transform translate-y-20 sm:scale-90 transition-all duration-400 text-center">
+                <div class="w-24 h-24 rounded-[2.5rem] bg-brand/10 flex items-center justify-center mx-auto mb-8 text-brand">
+                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
                 </div>
-                <div class="mb-6">
-                    <input type="text" id="decrypt-input" placeholder="在此输入密码" class="w-full px-4 py-3.5 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-lavender-400 dark:focus:ring-lavender-500 text-gray-800 dark:text-white text-center font-mono font-bold tracking-widest indent-[0.2em] text-lg">
-                </div>
-                <button id="decrypt-btn" class="w-full px-4 py-3 rounded-xl bg-lavender-500 hover:bg-lavender-600 text-white font-bold shadow-lg shadow-lavender-500/30 transition-all active:scale-95">查看内容</button>
+                <h3 class="text-2xl font-black text-zinc-800 dark:text-zinc-100 mb-2">此内容受密码保护</h3>
+                <p class="text-sm text-zinc-400 mb-10 font-medium">请输入 6 位密码以解锁</p>
+                <input type="text" id="decrypt-input" placeholder="输入密码"
+                    class="w-full px-8 py-6 mb-8 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl focus:outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand text-center font-mono text-3xl font-black tracking-[0.5em] text-brand placeholder-zinc-300 dark:placeholder-zinc-700">
+                <button id="decrypt-btn"
+                    class="w-full py-6 rounded-3xl bg-brand hover:bg-brand-hover text-white text-lg font-black shadow-lg shadow-brand/20 active:scale-[0.97] transition-all">
+                    解锁并查看
+                </button>
             </div>
         </div>
 
     </main>
 
-    <!-- 📚 核心库 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- 核心库 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
-        // === Toast 提示 ===
+        // === Toast ===
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            let bgClass = '', icon = '';
-            
+            let cls = '', icon = '';
             if (type === 'success') {
-                bgClass = 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900 shadow-xl';
-                icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+                cls = 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl';
+                icon = `<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
             } else if (type === 'error') {
-                bgClass = 'bg-white dark:bg-slate-700 text-red-500 dark:text-red-400 border border-red-100 dark:border-red-900 shadow-xl';
-                icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+                cls = 'bg-red-600 text-white shadow-xl shadow-red-200 dark:shadow-none';
+                icon = `<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`;
             } else {
-                bgClass = 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-slate-600 shadow-xl';
-                icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+                cls = 'bg-zinc-800 dark:bg-zinc-100 text-white dark:text-zinc-800 shadow-xl';
+                icon = `<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
             }
-
-            toast.className = `${bgClass} px-4 py-3 rounded-xl flex items-center gap-3 transform -translate-y-4 opacity-0 transition-all duration-300 w-auto min-w-[180px] justify-center font-medium backdrop-blur-sm pointer-events-auto`;
+            toast.className = `${cls} px-6 py-4 rounded-2xl flex items-center gap-4 text-sm font-extrabold translate-y-4 opacity-0 transition-all duration-400 pointer-events-auto animate-slide-up`;
             toast.innerHTML = `${icon}<span>${message}</span>`;
-            
             container.appendChild(toast);
-            requestAnimationFrame(() => toast.classList.remove('-translate-y-4', 'opacity-0'));
+            requestAnimationFrame(() => { toast.classList.remove('translate-y-4', 'opacity-0'); });
             setTimeout(() => {
-                toast.classList.add('opacity-0', '-translate-y-4');
-                setTimeout(() => toast.remove(), 300);
+                toast.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => toast.remove(), 400);
             }, 3000);
         }
 
-        // === 历史记录 & 图片缓存 ===
+        // === 历史记录 ===
         const MAX_HISTORY = 50;
-
         function getHistory() {
             try { return JSON.parse(localStorage.getItem('qr_history_v2') || '[]'); } catch(e) { return []; }
         }
-
         function saveHistory(content, type, thumbBase64 = null) {
-            if(!content) return;
+            if (!content) return;
             let history = getHistory();
-            
             if (history.length > 0 && history[0].content === content && history[0].type === type) {
                 history[0].time = new Date().toLocaleString();
             } else {
-                const newItem = {
-                    id: Date.now(),
-                    content: content,
-                    type: type, // 'gen' | 'scan'
-                    thumb: thumbBase64,
-                    time: new Date().toLocaleString()
-                };
-                history.unshift(newItem);
+                history.unshift({ id: Date.now(), content, type, thumb: thumbBase64, time: new Date().toLocaleString() });
             }
-
             if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
-            
             try {
                 localStorage.setItem('qr_history_v2', JSON.stringify(history));
                 renderHistory();
             } catch(e) {
                 history = history.slice(0, Math.floor(MAX_HISTORY / 2));
-                try { localStorage.setItem('qr_history_v2', JSON.stringify(history)); } catch(retryE) {}
+                try { localStorage.setItem('qr_history_v2', JSON.stringify(history)); } catch(r) {}
             }
         }
-
         function clearHistory() {
-            if(confirm('确定要清空所有历史记录吗？')) {
+            if (confirm('确定要清空所有历史记录吗？')) {
                 localStorage.removeItem('qr_history_v2');
                 renderHistory();
-                showToast('历史记录已清空', 'success');
+                showToast('已成功清空', 'success');
             }
         }
-
         function toggleHistory(show) {
             const panel = document.getElementById('history-panel');
-            if (show) {
-                renderHistory();
-                panel.classList.remove('translate-y-full');
-            } else {
-                panel.classList.add('translate-y-full');
-            }
+            if (show) { renderHistory(); panel.classList.remove('translate-y-full'); }
+            else { panel.classList.add('translate-y-full'); }
         }
-
         function renderHistory() {
             const list = document.getElementById('history-list');
             const history = getHistory();
-            
             if (history.length === 0) {
-                list.innerHTML = `<div class="text-center text-gray-400 dark:text-gray-600 text-sm mt-20 flex flex-col items-center gap-3">
-                    <svg class="w-12 h-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <p>暂无历史记录</p>
-                </div>`;
+                list.innerHTML = `<div class="text-center text-zinc-300 dark:text-zinc-700 py-32 flex flex-col items-center gap-6">
+                    <div class="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
+                        <svg class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <p class="text-base font-extrabold opacity-40">暂无任何记录</p></div>`;
                 return;
             }
-
             list.innerHTML = history.map(item => {
                 const isGen = item.type === 'gen';
-                const cardClass = isGen 
-                    ? 'border-l-4 border-l-lavender-400 dark:border-l-lavender-500 bg-white dark:bg-slate-800' 
-                    : 'border-l-4 border-l-emerald-400 dark:border-l-emerald-500 bg-white dark:bg-slate-800';
-                
-                const iconBg = isGen ? 'bg-lavender-50 text-lavender-600 dark:bg-lavender-900/20 dark:text-lavender-300' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300';
-                const typeLabel = isGen ? '生成记录' : '识别记录';
-                
-                const thumbHtml = !isGen && item.thumb 
-                    ? `<div class="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-100 dark:bg-slate-700 overflow-hidden border border-gray-200 dark:border-slate-600 mr-3">
-                         <img src="${item.thumb}" class="w-full h-full object-cover" alt="thumb">
-                       </div>`
-                    : `<div class="flex-shrink-0 w-10 h-10 rounded-full ${iconBg} flex items-center justify-center mr-3">
-                         ${isGen 
-                            ? '<svg class="w-5 h-5" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M432 560a32 32 0 0 1 32 32v288a32 32 0 0 1-32 32h-288a32 32 0 0 1-32-32v-288a32 32 0 0 1 32-32h288z m224 240c8.832 0 16 7.168 16 16V896a16 16 0 0 1-16 16H576a16 16 0 0 1-16-16v-80c0-8.832 7.168-16 16-16h80z m248.021333 0c8.832 0 16 7.168 16 16V896a16 16 0 0 1-16 16h-80a16 16 0 0 1-16-16v-80c0-8.832 7.125333-16 16-16h80zM399.957333 624h-224v224h224v-224z m384 48c8.832 0 16 7.168 16 16v96a16 16 0 0 1-16 16h-96a16 16 0 0 1-16-16v-96c0-8.832 7.168-16 16-16h96zM320 688c8.832 0 16 7.168 16 16V768a16 16 0 0 1-16 16H256A16 16 0 0 1 240 768v-64c0-8.832 7.168-16 16-16h64z m336-128c8.832 0 16 7.168 16 16v80a16 16 0 0 1-16 16H576a16 16 0 0 1-16-16V576c0-8.832 7.168-16 16-16h80z m248.021333 0c8.832 0 16 7.168 16 16v80a16 16 0 0 1-16 16h-80a16 16 0 0 1-16-16V576c0-8.832 7.125333-16 16-16h80z m-472.021333-448a32 32 0 0 1 32 32v288a32 32 0 0 1-32 32h-288a32 32 0 0 1-32-32v-288a32 32 0 0 1 32-32h288z m448 0a32 32 0 0 1 32 32v288a32 32 0 0 1-32 32h-288a32 32 0 0 1-32-32v-288a32 32 0 0 1 32-32h288z m-480 64h-224v224h224v-224z m448 0h-224v224h224v-224zM320 240c8.832 0 16 7.168 16 16v64a16 16 0 0 1-16 16H256a16 16 0 0 1-16-16V256c0-8.832 7.168-16 16-16h64z m448 0c8.832 0 16 7.168 16 16v64a16 16 0 0 1-16 16h-64a16 16 0 0 1-16-16V256c0-8.832 7.168-16 16-16H768z"></path></svg>' 
-                            : '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'}
-                       </div>`;
-
+                const badge = isGen
+                    ? `<span class="text-[10px] font-black px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">生成</span>`
+                    : `<span class="text-[10px] font-black px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">识别</span>`;
+                const thumb = !isGen && item.thumb
+                    ? `<img src="${item.thumb}" class="w-14 h-14 rounded-2xl object-cover flex-shrink-0 border border-zinc-100 dark:border-zinc-800 shadow-sm">`
+                    : `<div class="w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-zinc-400 border border-zinc-100 dark:border-zinc-800"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10M7 16h10"/></svg></div>`;
+                const timeStr = item.time.split(' ')[1] || item.time;
                 return `
-                <div class="p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 dark:border-slate-700/50 ${cardClass} group">
-                    <div class="flex items-start">
-                        ${thumbHtml}
+                <div class="p-5 rounded-3xl border border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 hover:bg-white dark:hover:bg-zinc-900 hover:border-zinc-200 dark:hover:border-zinc-700 transition-all duration-300 group">
+                    <div class="flex items-start gap-5">
+                        ${thumb}
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="text-[10px] font-bold uppercase tracking-wider ${isGen ? 'text-lavender-500' : 'text-emerald-500'}">${typeLabel}</span>
-                                <span class="text-[10px] text-gray-400 font-mono">${item.time.split(' ')[1] || item.time}</span>
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                ${badge}
+                                <span class="text-[10px] text-zinc-400 font-black uppercase">${timeStr}</span>
                             </div>
-                            <div class="text-sm text-gray-700 dark:text-gray-200 break-all line-clamp-2 font-mono leading-relaxed select-all" title="${item.content}">${item.content}</div>
+                            <div class="text-[14px] text-zinc-600 dark:text-zinc-300 break-all line-clamp-2 font-mono leading-relaxed select-all" title="${item.content}">${item.content}</div>
                         </div>
                     </div>
-                    <div class="mt-3 pt-3 border-t border-gray-50 dark:border-white/5 flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button onclick="copyText('${item.content.replace(/'/g, "\\'")}')" class="text-xs flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> 复制
+                    <div class="mt-4 flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        <button onclick="copyText('${item.content.replace(/'/g, "\\'")}')" class="text-xs font-black flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-brand transition-all">
+                            复制内容
                         </button>
-                        ${isGen ? `
-                        <button onclick="fillGen('${item.content.replace(/'/g, "\\'")}')" class="text-xs flex items-center gap-1.5 px-2 py-1 rounded hover:bg-lavender-50 dark:hover:bg-slate-700 text-lavender-500 hover:text-lavender-700 dark:text-lavender-400 transition-colors font-medium">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg> 填充
+                        ${isGen ? `<button onclick="fillGen('${item.content.replace(/'/g, "\\'")}')" class="text-xs font-black flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white hover:bg-brand-hover shadow-lg shadow-brand/20 transition-all">
+                            再次生成
                         </button>` : ''}
                     </div>
                 </div>`;
             }).join('');
         }
-
-        function copyText(text) { navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板', 'success')).catch(() => showToast('复制失败', 'error')); }
+        function copyText(text) { navigator.clipboard.writeText(text).then(() => showToast('已成功复制', 'success')).catch(() => showToast('复制失败', 'error')); }
         function fillGen(text) { document.getElementById('genInput').value = text; toggleHistory(false); switchTab('generate'); showToast('内容已填充', 'success'); }
-        function initTheme() { if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } }
-        function toggleTheme() { if (document.documentElement.classList.contains('dark')) { document.documentElement.classList.remove('dark'); localStorage.theme = 'light'; } else { document.documentElement.classList.add('dark'); localStorage.theme = 'dark'; } }
-        initTheme();
-        function switchTab(tab) {
-            const genPanel = document.getElementById('panel-generate'); const scanPanel = document.getElementById('panel-scan');
-            const genTab = document.getElementById('tab-generate'); const scanTab = document.getElementById('tab-scan');
-            const activeClass = "text-lavender-700 dark:text-lavender-300 bg-white dark:bg-slate-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 font-bold z-10";
-            const inactiveClass = "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-slate-600/50 z-0";
-            if (tab === 'generate') { genPanel.classList.remove('translate-x-[-100%]', 'opacity-0', 'pointer-events-none'); scanPanel.classList.add('translate-x-full', 'opacity-0', 'pointer-events-none'); genTab.className = `relative py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeClass}`; scanTab.className = `relative py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${inactiveClass}`; } else { scanPanel.classList.remove('translate-x-full', 'opacity-0', 'pointer-events-none'); genPanel.classList.add('translate-x-[-100%]', 'opacity-0', 'pointer-events-none'); scanTab.className = `relative py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeClass}`; genTab.className = `relative py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${inactiveClass}`; }
-        }
-        let qrcodeObj = null;
-        function generateQRCode() {
-            const text = document.getElementById("genInput").value.trim();
-            const container = document.getElementById("qrcode");
-            const placeholder = document.getElementById("genPlaceholder");
-            const dlBtn = document.getElementById("downloadBtn");
-            if (!text) { showToast("请输入内容后再生成", 'error'); return; }
-            if (typeof QRCode === 'undefined') { showToast("核心库加载失败，请检查网络", 'error'); return; }
-            container.innerHTML = ""; placeholder.classList.add("hidden"); container.classList.remove("hidden"); dlBtn.disabled = true; dlBtn.classList.remove("group-enabled");
-            const size = Math.min(container.parentElement.clientWidth - 32, 210);
-            setTimeout(() => { try { qrcodeObj = new QRCode(container, { text: text, width: size, height: size, colorDark : "#4c1d95", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M }); dlBtn.disabled = false; dlBtn.classList.add("group-enabled"); saveHistory(text, 'gen'); showToast("生成成功", 'success'); } catch(e) { showToast("生成失败: " + e.message, 'error'); placeholder.classList.remove("hidden"); container.classList.add("hidden"); } }, 50);
-        }
-        function downloadQRCode() { const img = document.querySelector("#qrcode img"); const canvas = document.querySelector("#qrcode canvas"); let url = null; if (canvas) url = canvas.toDataURL("image/png"); else if (img) url = img.src; if(url) { const link = document.createElement('a'); link.download = `QR_${new Date().toISOString().slice(0,10)}.png`; link.href = url; link.click(); } }
-        let timer = null;
-        function updateFileName(name) { const display = document.getElementById('fileNameDisplay'); const text = document.getElementById('fileNameText'); display.classList.remove('hidden'); display.classList.remove('animate-pulse'); if (timer) clearTimeout(timer); void display.offsetWidth; display.classList.add('animate-pulse'); timer = setTimeout(() => display.classList.remove('animate-pulse'), 1000); text.textContent = name; }
-        function handleFileSelect(input) { if (input.files && input.files[0]) { updateFileName(input.files[0].name); processImage(input.files[0]); input.value = ''; } }
-        document.addEventListener('paste', (event) => { if (document.getElementById('panel-scan').classList.contains('opacity-0')) return; const items = (event.clipboardData || event.originalEvent.clipboardData).items; for (let index in items) { const item = items[index]; if (item.kind === 'file' && item.type.startsWith('image/')) { const blob = item.getAsFile(); const timestamp = new Date().toLocaleTimeString('zh-CN', {hour12:false}).replace(/:/g, ''); updateFileName(`粘贴截图_${timestamp}.png`); processImage(blob); event.preventDefault(); break; } } });
-        function processImage(file) { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => scanImageElement(img); img.src = e.target.result; }; reader.readAsDataURL(file); }
-        function scanImageElement(img) {
-            const canvas = document.createElement('canvas'); const context = canvas.getContext('2d'); canvas.width = img.width; canvas.height = img.height; context.drawImage(img, 0, 0, img.width, img.height);
-            const statusEl = document.getElementById('scanStatus'); const resultEl = document.getElementById('scanResult');
-            try { const imageData = context.getImageData(0, 0, canvas.width, canvas.height); const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-                if (code) { resultEl.value = code.data; statusEl.classList.add('hidden'); 
-                    const thumbCanvas = document.createElement('canvas'); const targetW = 80; const scale = targetW / img.width; thumbCanvas.width = targetW; thumbCanvas.height = img.height * scale; const tCtx = thumbCanvas.getContext('2d'); tCtx.drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height); const thumbBase64 = thumbCanvas.toDataURL('image/jpeg', 0.5);
-                    saveHistory(code.data, 'scan', thumbBase64); showToast("识别成功", 'success');
-                } else { statusEl.textContent = "未发现二维码"; statusEl.classList.remove('hidden'); resultEl.value = ""; showToast("未发现二维码", 'error'); }
-            } catch (e) { console.error(e); statusEl.textContent = "解析出错"; statusEl.classList.remove('hidden'); showToast("解析出错", 'error'); }
-        }
-        function copyResult() { const res = document.getElementById('scanResult'); if(!res.value) { showToast('没有可复制的内容', 'info'); return; } res.select(); document.execCommand("copy"); showToast('识别结果已复制', 'success'); }
-        const dropZone = document.getElementById('dropZone'); ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, (ev) => { ev.preventDefault(); ev.stopPropagation(); }, false)); ['dragenter', 'dragover'].forEach(e => dropZone.classList.add('scale-[1.02]')); ['dragleave', 'drop'].forEach(e => dropZone.classList.remove('scale-[1.02]')); dropZone.addEventListener('drop', (e) => { const dt = e.dataTransfer; if(dt.files && dt.files[0]) handleFileSelect({files: dt.files}); }, false);
 
-        // === 分享模态框逻辑 ===
-        let isShareEncrypted = false;
-        let isIncludePwd = false;
+        // === 主题 ===
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+        initTheme();
+
+        // === Tab 切换 ===
+        function switchTab(tab) {
+            const genPanel = document.getElementById('panel-generate');
+            const scanPanel = document.getElementById('panel-scan');
+            const genTab = document.getElementById('tab-generate');
+            const scanTab = document.getElementById('tab-scan');
+            const indicator = document.getElementById('tab-indicator');
+            const inactiveCls = ['text-zinc-400', 'dark:text-zinc-500', 'hover:text-zinc-600', 'dark:hover:text-zinc-300'];
+            if (tab === 'generate') {
+                genPanel.classList.replace('panel-hidden', 'panel-visible');
+                scanPanel.classList.replace('panel-visible', 'panel-hidden');
+                genTab.classList.remove(...inactiveCls);
+                genTab.classList.add('text-zinc-900', 'dark:text-white');
+                scanTab.classList.add(...inactiveCls);
+                scanTab.classList.remove('text-zinc-900', 'dark:text-white');
+                const r = genTab.getBoundingClientRect(), p = document.getElementById('tab-bar').getBoundingClientRect();
+                indicator.style.left = (r.left - p.left) + 'px';
+                indicator.style.width = r.width + 'px';
+            } else {
+                scanPanel.classList.replace('panel-hidden', 'panel-visible');
+                genPanel.classList.replace('panel-visible', 'panel-hidden');
+                scanTab.classList.remove(...inactiveCls);
+                scanTab.classList.add('text-zinc-900', 'dark:text-white');
+                genTab.classList.add(...inactiveCls);
+                genTab.classList.remove('text-zinc-900', 'dark:text-white');
+                const r = scanTab.getBoundingClientRect(), p = document.getElementById('tab-bar').getBoundingClientRect();
+                indicator.style.left = (r.left - p.left) + 'px';
+                indicator.style.width = r.width + 'px';
+            }
+        }
+        window.addEventListener('load', () => setTimeout(() => switchTab('generate'), 150));
+        window.addEventListener('resize', () => {
+            const active = document.getElementById('panel-generate').classList.contains('panel-visible') ? 'generate' : 'scan';
+            switchTab(active);
+        });
+
+        // === 配色方案 ===
+        const COLOR_SCHEMES = [
+            { name: '经典',   dark: '#000000', light: '#ffffff' },
+            { name: '海洋',   dark: '#0c4a6e', light: '#e0f2fe' },
+            { name: '薰衣草', dark: '#4338ca', light: '#eef2ff' },
+            { name: '森林',   dark: '#14532d', light: '#f0fdf4' },
+            { name: '玫瑰',   dark: '#9f1239', light: '#fff1f2' },
+        ];
+        let selectedColorIndex = 0;
+        let selectedFormat = 'png';
+        let currentSvgString = '';
+
+        function renderColorSwatches() {
+            const el = document.getElementById('color-swatches');
+            el.innerHTML = COLOR_SCHEMES.map((s, i) => `
+                <button onclick="selectColor(${i})" title="${s.name}"
+                    class="w-7 h-7 rounded-full border-2 border-white dark:border-zinc-950 shadow-sm hover:scale-110 active:scale-95 transition-all duration-200 ${i === selectedColorIndex ? 'swatch-active' : ''}"
+                    style="background:linear-gradient(135deg,${s.dark} 50%,${s.light} 50%)">
+                </button>`).join('');
+        }
+
+        function selectColor(index) {
+            selectedColorIndex = index;
+            renderColorSwatches();
+        }
+
+        function selectFormat(fmt) {
+            selectedFormat = fmt;
+            const png = document.getElementById('fmt-png');
+            const svg = document.getElementById('fmt-svg');
+            const active = 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 shadow-sm';
+            const inactive = 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600';
+            png.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'png' ? active : inactive}`;
+            svg.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'svg' ? active : inactive}`;
+        }
+
+        // === 生成 ===
+        async function generateQRCode() {
+            const text = document.getElementById('genInput').value.trim();
+            const container = document.getElementById('qrcode');
+            const placeholder = document.getElementById('genPlaceholder');
+            const dlBtn = document.getElementById('downloadBtn');
+            const actions = document.getElementById('qr-actions');
+            if (!text) { showToast('请输入内容', 'error'); return; }
+
+            container.innerHTML = '';
+            placeholder.classList.add('hidden');
+            container.classList.remove('hidden');
+            container.classList.add('scale-90', 'opacity-0');
+            actions.classList.add('hidden');
+            dlBtn.disabled = true;
+            currentSvgString = '';
+
+            const scheme = COLOR_SCHEMES[selectedColorIndex];
+            const opts = { width: 220, margin: 2, color: { dark: scheme.dark, light: scheme.light } };
+
+            try {
+                if (selectedFormat === 'svg') {
+                    const svgStr = await QRCode.toString(text, { ...opts, type: 'svg' });
+                    currentSvgString = svgStr;
+                    container.innerHTML = svgStr;
+                    const svgEl = container.querySelector('svg');
+                    if (svgEl) { svgEl.style.borderRadius = '16px'; svgEl.setAttribute('width', '220'); svgEl.setAttribute('height', '220'); }
+                } else {
+                    const canvas = document.createElement('canvas');
+                    container.appendChild(canvas);
+                    await QRCode.toCanvas(canvas, text, opts);
+                    canvas.style.borderRadius = '16px';
+                }
+
+                setTimeout(() => {
+                    container.classList.remove('scale-90', 'opacity-0');
+                    container.classList.add('scale-100', 'opacity-100');
+                    dlBtn.disabled = false;
+                    actions.classList.remove('hidden');
+                    saveHistory(text, 'gen');
+                    showToast(`成功生成 ${selectedFormat.toUpperCase()} 二维码`, 'success');
+                }, 50);
+            } catch(e) {
+                showToast('生成失败，请检查内容', 'error');
+                placeholder.classList.remove('hidden');
+                container.classList.add('hidden');
+            }
+        }
+
+        function downloadQRCode() {
+            if (selectedFormat === 'svg' && currentSvgString) {
+                const blob = new Blob([currentSvgString], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.download = `QR_${Date.now()}.svg`;
+                a.href = url; a.click();
+                URL.revokeObjectURL(url);
+                showToast('正在为您下载 SVG', 'success');
+            } else {
+                const canvas = document.querySelector('#qrcode canvas');
+                const img = document.querySelector('#qrcode img');
+                const url = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+                if (url) {
+                    const a = document.createElement('a');
+                    a.download = `QR_${Date.now()}.png`;
+                    a.href = url; a.click();
+                    showToast('正在为您下载图片', 'success');
+                }
+            }
+        }
+
+        // === 识别 ===
+        function updateFileName(name) {
+            const display = document.getElementById('fileNameDisplay');
+            document.getElementById('fileNameText').textContent = name;
+            display.classList.remove('hidden');
+            display.classList.add('flex');
+            setTimeout(() => { display.classList.add('hidden'); display.classList.remove('flex'); }, 5000);
+        }
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                updateFileName(input.files[0].name);
+                processImage(input.files[0]);
+                input.value = '';
+            }
+        }
+
+        document.addEventListener('paste', (event) => {
+            if (document.getElementById('panel-scan').classList.contains('panel-hidden')) return;
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let i in items) {
+                const item = items[i];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    updateFileName('粘贴的图片.png');
+                    processImage(blob);
+                    event.preventDefault(); break;
+                }
+            }
+        });
+
+        function processImage(file) {
+            const isSvg = file.type === 'image/svg+xml' || (file.name && file.name.toLowerCase().endsWith('.svg'));
+            if (isSvg) {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    const w = img.naturalWidth || 500, h = img.naturalHeight || 500;
+                    const scale = Math.max(500 / Math.min(w, h), 1);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(w * scale);
+                    canvas.height = Math.round(h * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    decodeFromCanvas(canvas);
+                    URL.revokeObjectURL(url);
+                };
+                img.onerror = () => { showToast('无法加载 SVG 文件', 'error'); URL.revokeObjectURL(url); };
+                img.src = url;
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width; canvas.height = img.height;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        decodeFromCanvas(canvas);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function decodeFromCanvas(canvas) {
+            const ctx = canvas.getContext('2d');
+            const statusEl = document.getElementById('scanStatus');
+            const resultEl = document.getElementById('scanResult');
+            try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                if (code) {
+                    resultEl.value = code.data;
+                    statusEl.classList.add('hidden');
+                    const tc = document.createElement('canvas');
+                    const tw = 120, scale = tw / canvas.width;
+                    tc.width = tw; tc.height = Math.round(canvas.height * scale);
+                    tc.getContext('2d').drawImage(canvas, 0, 0, tc.width, tc.height);
+                    saveHistory(code.data, 'scan', tc.toDataURL('image/jpeg', 0.6));
+                    showToast('二维码识别成功', 'success');
+                } else {
+                    statusEl.classList.remove('hidden');
+                    resultEl.value = '';
+                    showToast('未发现有效二维码', 'error');
+                }
+            } catch(e) {
+                showToast('解析过程出现错误', 'error');
+            }
+        }
+
+        function copyResult() {
+            const res = document.getElementById('scanResult');
+            if (!res.value) return;
+            navigator.clipboard.writeText(res.value).then(() => showToast('内容已成功复制', 'success'));
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        ['dragenter','dragover','dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); }));
+        ['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('border-brand','bg-brand/5','scale-[1.01]')));
+        ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('border-brand','bg-brand/5','scale-[1.01]')));
+        dropZone.addEventListener('drop', e => { if (e.dataTransfer.files && e.dataTransfer.files[0]) { updateFileName(e.dataTransfer.files[0].name); processImage(e.dataTransfer.files[0]); } });
+
+        // === 分享/解密 ===
+        let isShareEncrypted = false, isIncludePwd = false;
 
         function openShareModal() {
-            const text = document.getElementById("genInput").value.trim();
-            if (!text) { showToast("请先输入内容", 'error'); return; }
-            
+            const text = document.getElementById('genInput').value.trim();
+            if (!text) { showToast('请先输入内容', 'error'); return; }
+            isShareEncrypted = false; isIncludePwd = false;
+            document.getElementById('share-switch-bg').classList.add('bg-zinc-200','dark:bg-zinc-800');
+            document.getElementById('share-switch-bg').classList.remove('bg-brand');
+            document.getElementById('share-switch-circle').classList.remove('translate-x-6');
+            document.getElementById('share-pwd-container').classList.add('hidden');
+            const box = document.getElementById('include-pwd-checkbox');
+            box.classList.remove('bg-brand','border-brand');
+            box.querySelector('svg').classList.add('opacity-0');
             const modal = document.getElementById('share-modal');
             const card = document.getElementById('share-modal-card');
-            
-            // 重置状态
-            isShareEncrypted = false;
-            isIncludePwd = false;
-            document.getElementById('share-switch-bg').className = "relative w-11 h-6 transition-all duration-200 ease-in-out rounded-full bg-gray-200 dark:bg-gray-600";
-            document.getElementById('share-switch-circle').className = "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out translate-x-0";
-            document.getElementById('share-pwd-container').classList.add('hidden');
-            document.getElementById('share-pwd-input').value = '';
-            
-            // 重置包含密码 Checkbox
-            const pwdBox = document.getElementById('include-pwd-checkbox');
-            const pwdCheck = pwdBox.querySelector('svg');
-            pwdBox.classList.add('border-gray-300', 'dark:border-slate-500', 'bg-white', 'dark:bg-slate-700');
-            pwdBox.classList.remove('bg-indigo-500', 'border-indigo-500');
-            pwdCheck.classList.add('opacity-0');
-
             modal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                modal.classList.remove('opacity-0');
-                card.classList.remove('scale-95');
-            });
+            requestAnimationFrame(() => { modal.classList.remove('opacity-0'); card.classList.remove('translate-y-20','sm:scale-90'); });
         }
 
         function closeShareModal() {
             const modal = document.getElementById('share-modal');
             const card = document.getElementById('share-modal-card');
-            modal.classList.add('opacity-0');
-            card.classList.add('scale-95');
+            modal.classList.add('opacity-0'); card.classList.add('translate-y-20','sm:scale-90');
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
@@ -512,18 +768,13 @@
             const bg = document.getElementById('share-switch-bg');
             const circle = document.getElementById('share-switch-circle');
             const container = document.getElementById('share-pwd-container');
-            const input = document.getElementById('share-pwd-input');
-
             if (isShareEncrypted) {
-                bg.className = "relative w-11 h-6 transition-all duration-200 ease-in-out rounded-full bg-indigo-500";
-                circle.className = "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out translate-x-5";
-                container.classList.remove('hidden');
-                regenerateKey(); 
+                bg.classList.remove('bg-zinc-200','dark:bg-zinc-800'); bg.classList.add('bg-brand');
+                circle.classList.add('translate-x-6'); container.classList.remove('hidden');
+                regenerateKey();
             } else {
-                bg.className = "relative w-11 h-6 transition-all duration-200 ease-in-out rounded-full bg-gray-200 dark:bg-gray-600";
-                circle.className = "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out translate-x-0";
-                container.classList.add('hidden');
-                input.value = '';
+                bg.classList.add('bg-zinc-200','dark:bg-zinc-800'); bg.classList.remove('bg-brand');
+                circle.classList.remove('translate-x-6'); container.classList.add('hidden');
             }
         }
 
@@ -531,155 +782,66 @@
             isIncludePwd = !isIncludePwd;
             const box = document.getElementById('include-pwd-checkbox');
             const check = box.querySelector('svg');
-            
-            if (isIncludePwd) {
-                box.classList.remove('border-gray-300', 'dark:border-slate-500', 'bg-white', 'dark:bg-slate-700');
-                box.classList.add('bg-indigo-500', 'border-indigo-500');
-                check.classList.remove('opacity-0');
-            } else {
-                box.classList.add('border-gray-300', 'dark:border-slate-500', 'bg-white', 'dark:bg-slate-700');
-                box.classList.remove('bg-indigo-500', 'border-indigo-500');
-                check.classList.add('opacity-0');
-            }
+            if (isIncludePwd) { box.classList.add('bg-brand','border-brand'); check.classList.remove('opacity-0'); }
+            else { box.classList.remove('bg-brand','border-brand'); check.classList.add('opacity-0'); }
         }
 
-        function regenerateKey() {
-            const key = Math.random().toString(36).slice(-6).toUpperCase();
-            document.getElementById('share-pwd-input').value = key;
-        }
+        function regenerateKey() { document.getElementById('share-pwd-input').value = Math.random().toString(36).slice(-6).toUpperCase(); }
 
         function confirmShare() {
-            const text = document.getElementById("genInput").value.trim();
+            const text = document.getElementById('genInput').value.trim();
             const password = isShareEncrypted ? document.getElementById('share-pwd-input').value.trim() : '';
-            
-            if (isShareEncrypted && password.length !== 6) {
-                showToast("密钥必须为6位字符", 'error');
-                return;
-            }
-
-            const url = new URL(window.location.href);
-            url.search = ''; 
-            
+            const url = new URL(window.location.href); url.search = '';
             if (isShareEncrypted) {
-                try {
-                    const encrypted = CryptoJS.AES.encrypt(text, password).toString();
-                    url.searchParams.set('e', encrypted);
-                } catch(e) {
-                    showToast("加密失败", 'error');
-                    return;
-                }
-            } else {
-                url.searchParams.set('t', text);
-            }
-            
-            const shareUrl = url.toString();
-            if (shareUrl.length > 2000) showToast("链接过长可能被截断", 'info');
-
-            let textToCopy = shareUrl;
-            if (isShareEncrypted && isIncludePwd) {
-                textToCopy = `「分享地址」请在浏览器输入地址 ${shareUrl} 「分享密码」${password}`;
-            }
-
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                showToast(isShareEncrypted ? "加密链接已复制" + (isIncludePwd ? " (含密码)" : "") : "链接已复制", 'success');
-                closeShareModal();
-            }).catch(() => showToast("复制失败", 'error'));
+                try { url.searchParams.set('e', CryptoJS.AES.encrypt(text, password).toString()); }
+                catch(e) { return; }
+            } else { url.searchParams.set('t', text); }
+            let textToCopy = url.toString();
+            if (isShareEncrypted && isIncludePwd) textToCopy = `内容：${url.toString()}\n密码：${password}`;
+            navigator.clipboard.writeText(textToCopy).then(() => { showToast('链接已成功复制', 'success'); closeShareModal(); });
         }
 
-        // === 解密模态框逻辑 ===
         let decryptCallback = null;
-
         function openDecryptModal(callback) {
             decryptCallback = callback;
             const modal = document.getElementById('decrypt-modal');
             const card = document.getElementById('decrypt-modal-card');
-            const input = document.getElementById('decrypt-input');
-            input.value = '';
-            
             modal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                modal.classList.remove('opacity-0');
-                card.classList.remove('scale-95');
-                input.focus();
-            });
+            requestAnimationFrame(() => { modal.classList.remove('opacity-0'); card.classList.remove('translate-y-20','sm:scale-90'); document.getElementById('decrypt-input').focus(); });
         }
-
         function closeDecryptModal() {
             const modal = document.getElementById('decrypt-modal');
             const card = document.getElementById('decrypt-modal-card');
-            modal.classList.add('opacity-0');
-            card.classList.add('scale-95');
+            modal.classList.add('opacity-0'); card.classList.add('translate-y-20','sm:scale-90');
             setTimeout(() => modal.classList.add('hidden'), 300);
-            decryptCallback = null;
         }
-
-        function shakeDecryptModal() {
-            const card = document.getElementById('decrypt-modal-card');
-            card.classList.remove('animate-shake');
-            void card.offsetWidth; 
-            card.classList.add('animate-shake');
-        }
-
         document.getElementById('decrypt-btn').onclick = () => {
             const pwd = document.getElementById('decrypt-input').value.trim();
             if (decryptCallback) decryptCallback(pwd);
         };
-        
-        document.getElementById('decrypt-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('decrypt-btn').click();
-        });
 
-        // === 初始化逻辑 ===
+        // === Init ===
+        renderColorSwatches();
+        selectFormat('png');
+
         (function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const plainText = urlParams.get('t');
-            const encryptedText = urlParams.get('e');
-            
-            if (plainText) {
-                const input = document.getElementById('genInput');
-                input.value = plainText;
-                cleanUrl();
-                autoGen();
-            } else if (encryptedText) {
-                openDecryptModal((password) => {
-                    if (!password) {
-                        shakeDecryptModal();
-                        showToast("请输入密码", 'error');
-                        return;
-                    }
+            const params = new URLSearchParams(window.location.search);
+            const plain = params.get('t'), enc = params.get('e');
+            if (plain) { document.getElementById('genInput').value = plain; cleanUrl(); autoGen(); }
+            else if (enc) {
+                openDecryptModal(pwd => {
                     try {
-                        const bytes = CryptoJS.AES.decrypt(encryptedText, password);
-                        const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
-                        
-                        if (decryptedData) {
-                            document.getElementById('genInput').value = decryptedData;
-                            closeDecryptModal();
-                            cleanUrl();
-                            autoGen();
-                            showToast("解密成功", 'success');
-                        } else {
-                            shakeDecryptModal();
-                            showToast("密码错误", 'error');
-                        }
-                    } catch(e) {
-                        shakeDecryptModal();
-                        showToast("解密失败，密码错误或数据损坏", 'error');
-                    }
+                        const bytes = CryptoJS.AES.decrypt(enc, pwd);
+                        const data = bytes.toString(CryptoJS.enc.Utf8);
+                        if (data) { document.getElementById('genInput').value = data; closeDecryptModal(); cleanUrl(); autoGen(); showToast('成功解锁内容', 'success'); }
+                        else { document.getElementById('decrypt-modal-card').classList.add('animate-shake'); setTimeout(() => document.getElementById('decrypt-modal-card').classList.remove('animate-shake'), 500); showToast('密码错误', 'error'); }
+                    } catch(e) { showToast('解密失败', 'error'); }
                 });
             }
         })();
 
-        function cleanUrl() {
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.replaceState({path: newUrl}, '', newUrl);
-        }
-
-        function autoGen() {
-            setTimeout(() => {
-                switchTab('generate');
-                generateQRCode();
-            }, 300);
-        }
+        function cleanUrl() { window.history.replaceState({}, '', window.location.pathname); }
+        function autoGen() { setTimeout(() => { switchTab('generate'); generateQRCode(); }, 600); }
     </script>
 </body>
 </html>
