@@ -363,7 +363,7 @@
     </main>
 
     <!-- 核心库 -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
@@ -563,8 +563,27 @@
             svg.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'svg' ? active : inactive}`;
         }
 
+        // === SVG 构建（从 qrcodejs 内部模型读取矩阵）===
+        function buildSvg(model, darkColor, lightColor, size) {
+            const count = model.moduleCount;
+            const margin = 4;
+            const cell = size / (count + margin * 2);
+            let rects = '';
+            for (let r = 0; r < count; r++) {
+                for (let c = 0; c < count; c++) {
+                    if (model.isDark(r, c)) {
+                        const x = ((c + margin) * cell).toFixed(2);
+                        const y = ((r + margin) * cell).toFixed(2);
+                        const s = cell.toFixed(2);
+                        rects += `<rect x="${x}" y="${y}" width="${s}" height="${s}"/>`;
+                    }
+                }
+            }
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="${lightColor}"/><g fill="${darkColor}">${rects}</g></svg>`;
+        }
+
         // === 生成 ===
-        async function generateQRCode() {
+        function generateQRCode() {
             const text = document.getElementById('genInput').value.trim();
             const container = document.getElementById('qrcode');
             const placeholder = document.getElementById('genPlaceholder');
@@ -581,34 +600,56 @@
             currentSvgString = '';
 
             const scheme = COLOR_SCHEMES[selectedColorIndex];
-            const opts = { width: 220, margin: 2, color: { dark: scheme.dark, light: scheme.light } };
 
-            try {
-                if (selectedFormat === 'svg') {
-                    const svgStr = await QRCode.toString(text, { ...opts, type: 'svg' });
-                    currentSvgString = svgStr;
-                    container.innerHTML = svgStr;
-                    const svgEl = container.querySelector('svg');
-                    if (svgEl) { svgEl.style.borderRadius = '16px'; svgEl.setAttribute('width', '220'); svgEl.setAttribute('height', '220'); }
-                } else {
-                    const canvas = document.createElement('canvas');
-                    container.appendChild(canvas);
-                    await QRCode.toCanvas(canvas, text, opts);
-                    canvas.style.borderRadius = '16px';
-                }
-
+            const onSuccess = (label) => {
                 setTimeout(() => {
                     container.classList.remove('scale-90', 'opacity-0');
                     container.classList.add('scale-100', 'opacity-100');
                     dlBtn.disabled = false;
                     actions.classList.remove('hidden');
                     saveHistory(text, 'gen');
-                    showToast(`成功生成 ${selectedFormat.toUpperCase()} 二维码`, 'success');
+                    showToast(`成功生成 ${label} 二维码`, 'success');
                 }, 50);
-            } catch(e) {
+            };
+
+            const onError = () => {
                 showToast('生成失败，请检查内容', 'error');
                 placeholder.classList.remove('hidden');
                 container.classList.add('hidden');
+            };
+
+            try {
+                if (selectedFormat === 'svg') {
+                    // Use qrcodejs internally to get the QR matrix, then render as SVG
+                    const ghost = document.createElement('div');
+                    ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
+                    document.body.appendChild(ghost);
+                    const qr = new QRCode(ghost, {
+                        text, width: 220, height: 220,
+                        colorDark: '#000000', colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    const model = qr._oQRCode;
+                    document.body.removeChild(ghost);
+                    if (!model) { onError(); return; }
+                    const svgStr = buildSvg(model, scheme.dark, scheme.light, 220);
+                    currentSvgString = svgStr;
+                    container.innerHTML = svgStr;
+                    const svgEl = container.querySelector('svg');
+                    if (svgEl) svgEl.style.borderRadius = '16px';
+                    onSuccess('SVG');
+                } else {
+                    new QRCode(container, {
+                        text, width: 220, height: 220,
+                        colorDark: scheme.dark, colorLight: scheme.light,
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    const canvas = container.querySelector('canvas');
+                    if (canvas) canvas.style.borderRadius = '16px';
+                    onSuccess('PNG');
+                }
+            } catch(e) {
+                onError();
             }
         }
 
