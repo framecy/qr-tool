@@ -909,9 +909,12 @@
                 placeholder.classList.remove('hidden');
                 container.classList.add('hidden');
             };
+            let currentLevel = QRCode.CorrectLevel.M;
             try {
                 const utf8WifiStr = toUtf8String(wifiStr);
                 const typeNum = getRequiredTypeNumber(utf8WifiStr);
+                console.log('[WifiGenerate] First attempt. Raw length:', wifiStr.length, 'UTF-8 byte length:', utf8WifiStr.length, 'Estimated Version:', typeNum, 'Level: M');
+
                 if (selectedFormat === 'svg') {
                     const ghost = document.createElement('div');
                     ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
@@ -919,7 +922,7 @@
                     const qr = new QRCode(ghost, {
                         width: 256, height: 256,
                         colorDark: '#000000', colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.M,
+                        correctLevel: currentLevel,
                         typeNumber: typeNum
                     });
                     qr.makeCode(utf8WifiStr);
@@ -936,7 +939,7 @@
                     const qr = new QRCode(container, {
                         width: 256, height: 256,
                         colorDark: scheme.dark, colorLight: scheme.light,
-                        correctLevel: QRCode.CorrectLevel.M,
+                        correctLevel: currentLevel,
                         typeNumber: typeNum
                     });
                     qr.makeCode(utf8WifiStr);
@@ -945,8 +948,50 @@
                     onSuccess('PNG');
                 }
             } catch(e) {
-                console.error('[WifiGenerate] Error caught during generation:', e);
-                onError();
+                console.warn('[WifiGenerate] First attempt (Level M) failed. Error:', e.message || e, '. Retrying with Level L...');
+                try {
+                    container.innerHTML = '';
+                    currentLevel = QRCode.CorrectLevel.L;
+                    const utf8WifiStr = toUtf8String(wifiStr);
+                    const typeNum = getRequiredTypeNumber(utf8WifiStr);
+                    console.log('[WifiGenerate] Second attempt. Raw length:', wifiStr.length, 'UTF-8 byte length:', utf8WifiStr.length, 'Estimated Version:', typeNum, 'Level: L');
+
+                    if (selectedFormat === 'svg') {
+                        const ghost = document.createElement('div');
+                        ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
+                        document.body.appendChild(ghost);
+                        const qr = new QRCode(ghost, {
+                            width: 256, height: 256,
+                            colorDark: '#000000', colorLight: '#ffffff',
+                            correctLevel: currentLevel,
+                            typeNumber: typeNum
+                        });
+                        qr.makeCode(utf8WifiStr);
+                        const model = qr._oQRCode;
+                        document.body.removeChild(ghost);
+                        if (!model) { onError(); return; }
+                        const svgStr = buildSvg(model, scheme.dark, scheme.light, 256);
+                        currentWifiSvgString = svgStr;
+                        container.innerHTML = svgStr;
+                        const svgEl = container.querySelector('svg');
+                        if (svgEl) svgEl.style.borderRadius = '12px';
+                        onSuccess('SVG');
+                    } else {
+                        const qr = new QRCode(container, {
+                            width: 256, height: 256,
+                            colorDark: scheme.dark, colorLight: scheme.light,
+                            correctLevel: currentLevel,
+                            typeNumber: typeNum
+                        });
+                        qr.makeCode(utf8WifiStr);
+                        const canvas = container.querySelector('canvas');
+                        if (canvas) canvas.style.borderRadius = '12px';
+                        onSuccess('PNG');
+                    }
+                } catch(err) {
+                    console.error('[WifiGenerate] Second attempt (Level L) also failed. Error:', err);
+                    onError();
+                }
             }
         }
 
@@ -1073,9 +1118,12 @@
                 container.classList.add('hidden');
             };
 
+            let currentLevel = QRCode.CorrectLevel.M;
             try {
                 const utf8Text = toUtf8String(text);
                 const typeNum = getRequiredTypeNumber(utf8Text);
+                console.log('[Generate] First attempt. Raw length:', text.length, 'UTF-8 byte length:', utf8Text.length, 'Estimated Version:', typeNum, 'Level: M');
+
                 if (selectedFormat === 'svg') {
                     // Use qrcodejs internally to get the QR matrix, then render as SVG
                     const ghost = document.createElement('div');
@@ -1084,7 +1132,7 @@
                     const qr = new QRCode(ghost, {
                         width: 220, height: 220,
                         colorDark: '#000000', colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.M,
+                        correctLevel: currentLevel,
                         typeNumber: typeNum
                     });
                     qr.makeCode(utf8Text);
@@ -1101,7 +1149,7 @@
                     const qr = new QRCode(container, {
                         width: 220, height: 220,
                         colorDark: scheme.dark, colorLight: scheme.light,
-                        correctLevel: QRCode.CorrectLevel.M,
+                        correctLevel: currentLevel,
                         typeNumber: typeNum
                     });
                     qr.makeCode(utf8Text);
@@ -1110,8 +1158,50 @@
                     onSuccess('PNG');
                 }
             } catch(e) {
-                console.error('[Generate] Error caught during generation:', e);
-                onError();
+                console.warn('[Generate] First attempt (Level M) failed. Error:', e.message || e, '. Retrying with Level L...');
+                try {
+                    container.innerHTML = '';
+                    currentLevel = QRCode.CorrectLevel.L;
+                    const utf8Text = toUtf8String(text);
+                    const typeNum = getRequiredTypeNumber(utf8Text);
+                    console.log('[Generate] Second attempt. Raw length:', text.length, 'UTF-8 byte length:', utf8Text.length, 'Estimated Version:', typeNum, 'Level: L');
+
+                    if (selectedFormat === 'svg') {
+                        const ghost = document.createElement('div');
+                        ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
+                        document.body.appendChild(ghost);
+                        const qr = new QRCode(ghost, {
+                            width: 220, height: 220,
+                            colorDark: '#000000', colorLight: '#ffffff',
+                            correctLevel: currentLevel,
+                            typeNumber: typeNum
+                        });
+                        qr.makeCode(utf8Text);
+                        const model = qr._oQRCode;
+                        document.body.removeChild(ghost);
+                        if (!model) { onError(); return; }
+                        const svgStr = buildSvg(model, scheme.dark, scheme.light, 220);
+                        currentSvgString = svgStr;
+                        container.innerHTML = svgStr;
+                        const svgEl = container.querySelector('svg');
+                        if (svgEl) svgEl.style.borderRadius = '16px';
+                        onSuccess('SVG');
+                    } else {
+                        const qr = new QRCode(container, {
+                            width: 220, height: 220,
+                            colorDark: scheme.dark, colorLight: scheme.light,
+                            correctLevel: currentLevel,
+                            typeNumber: typeNum
+                        });
+                        qr.makeCode(utf8Text);
+                        const canvas = container.querySelector('canvas');
+                        if (canvas) canvas.style.borderRadius = '16px';
+                        onSuccess('PNG');
+                    }
+                } catch(err) {
+                    console.error('[Generate] Second attempt (Level L) also failed. Error:', err);
+                    onError();
+                }
             }
         }
 
