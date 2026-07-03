@@ -94,8 +94,8 @@
         #qrcode img    { display: block; margin: 0 auto; border-radius: 16px; }
         #qrcode svg    { display: block; margin: 0 auto; border-radius: 16px; width: 220px; height: 220px; }
 
-        #wifi-qrcode canvas { display: block; margin: 0 auto; border-radius: 12px; }
-        #wifi-qrcode img    { display: block; margin: 0 auto; border-radius: 12px; }
+        #wifi-qrcode canvas { display: block; margin: 0 auto; border-radius: 12px; width: 156px; height: 156px; }
+        #wifi-qrcode img    { display: block; margin: 0 auto; border-radius: 12px; width: 156px; height: 156px; }
         #wifi-qrcode svg    { display: block; margin: 0 auto; border-radius: 12px; width: 156px; height: 156px; }
 
 
@@ -916,14 +916,14 @@
                     ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
                     document.body.appendChild(ghost);
                     const qr = new QRCode(ghost, {
-                        text: utf8WifiStr, width: 156, height: 156,
+                        text: utf8WifiStr, width: 256, height: 256,
                         colorDark: '#000000', colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M
                     });
                     const model = qr._oQRCode;
                     document.body.removeChild(ghost);
                     if (!model) { onError(); return; }
-                    const svgStr = buildSvg(model, scheme.dark, scheme.light, 156);
+                    const svgStr = buildSvg(model, scheme.dark, scheme.light, 256);
                     currentWifiSvgString = svgStr;
                     container.innerHTML = svgStr;
                     const svgEl = container.querySelector('svg');
@@ -931,7 +931,7 @@
                     onSuccess('SVG');
                 } else {
                     new QRCode(container, {
-                        text: utf8WifiStr, width: 156, height: 156,
+                        text: utf8WifiStr, width: 256, height: 256,
                         colorDark: scheme.dark, colorLight: scheme.light,
                         correctLevel: QRCode.CorrectLevel.M
                     });
