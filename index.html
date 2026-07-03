@@ -193,15 +193,15 @@
                         <div id="qrcode" class="hidden p-5 bg-white rounded-4xl shadow-lg transition-all duration-500 scale-90 opacity-0"></div>
 
                         <!-- QR actions -->
-                        <div id="qr-actions" class="hidden absolute top-3 right-3 flex flex-col gap-2">
+                        <div id="qr-actions" class="hidden absolute top-3 right-3 flex flex-col gap-2.5 z-20">
                             <button onclick="openShareModal()" title="分享"
-                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-brand shadow-sm active:scale-90 transition-all">
+                                class="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur-lg border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 hover:text-white dark:hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:scale-110 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-6px_rgba(79,70,229,0.5)] active:scale-95 active:translate-y-0 shadow-lg shadow-zinc-100/50 dark:shadow-black/40 transition-all duration-300 ease-out">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
                                 </svg>
                             </button>
                             <button onclick="downloadQRCode()" id="downloadBtn" disabled title="下载"
-                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 [&:not(:disabled)]:hover:text-brand shadow-sm active:scale-90 transition-all">
+                                class="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur-lg border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 hover:disabled:scale-100 hover:disabled:translate-y-0 [&:not(:disabled)]:hover:text-white [&:not(:disabled)]:hover:bg-indigo-600 dark:[&:not(:disabled)]:hover:bg-indigo-500 [&:not(:disabled)]:hover:scale-110 [&:not(:disabled)]:hover:-translate-y-0.5 [&:not(:disabled)]:hover:shadow-[0_8px_20px_-6px_rgba(79,70,229,0.5)] active:scale-95 active:translate-y-0 shadow-lg shadow-zinc-100/50 dark:shadow-black/40 transition-all duration-300 ease-out">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                 </svg>
@@ -311,16 +311,16 @@
                         <div id="wifi-qrcode" class="hidden p-3 bg-white rounded-3xl shadow-lg transition-all duration-500 scale-90 opacity-0"></div>
 
                         <!-- QR actions -->
-                        <div id="wifi-qr-actions" class="hidden absolute top-3 right-3 flex flex-col gap-2">
+                        <div id="wifi-qr-actions" class="hidden absolute top-3 right-3 flex flex-col gap-2.5 z-20">
                             <button onclick="openWifiShareModal()" title="分享"
-                                class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-brand shadow-sm active:scale-90 transition-all">
-                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                class="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur-lg border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 hover:text-white dark:hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:scale-110 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-6px_rgba(79,70,229,0.5)] active:scale-95 active:translate-y-0 shadow-lg shadow-zinc-100/50 dark:shadow-black/40 transition-all duration-300 ease-out">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
                                 </svg>
                             </button>
                             <button onclick="downloadWifiQRCode()" id="wifiDownloadBtn" disabled title="下载"
-                                class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 [&:not(:disabled)]:hover:text-brand shadow-sm active:scale-90 transition-all">
-                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                class="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur-lg border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 hover:disabled:scale-100 hover:disabled:translate-y-0 [&:not(:disabled)]:hover:text-white [&:not(:disabled)]:hover:bg-indigo-600 dark:[&:not(:disabled)]:hover:bg-indigo-500 [&:not(:disabled)]:hover:scale-110 [&:not(:disabled)]:hover:-translate-y-0.5 [&:not(:disabled)]:hover:shadow-[0_8px_20px_-6px_rgba(79,70,229,0.5)] active:scale-95 active:translate-y-0 shadow-lg shadow-zinc-100/50 dark:shadow-black/40 transition-all duration-300 ease-out">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                 </svg>
                             </button>
