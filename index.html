@@ -911,6 +911,7 @@
             };
             try {
                 const utf8WifiStr = toUtf8String(wifiStr);
+                const typeNum = getRequiredTypeNumber(utf8WifiStr);
                 if (selectedFormat === 'svg') {
                     const ghost = document.createElement('div');
                     ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
@@ -919,7 +920,7 @@
                         width: 256, height: 256,
                         colorDark: '#000000', colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M,
-                        typeNumber: 10
+                        typeNumber: typeNum
                     });
                     qr.makeCode(utf8WifiStr);
                     const model = qr._oQRCode;
@@ -936,7 +937,7 @@
                         width: 256, height: 256,
                         colorDark: scheme.dark, colorLight: scheme.light,
                         correctLevel: QRCode.CorrectLevel.M,
-                        typeNumber: 10
+                        typeNumber: typeNum
                     });
                     qr.makeCode(utf8WifiStr);
                     const canvas = container.querySelector('canvas');
@@ -995,6 +996,23 @@
                 }
             }
             return out;
+        }
+
+        // === 动态估算二维码版本号（typeNumber），防止在 qrcodejs 实例化时抛出溢出错误 ===
+        function getRequiredTypeNumber(text) {
+            const len = text.length;
+            const limitM = [
+                0, 14, 26, 42, 62, 84, 106, 122, 152, 180, 213,
+                251, 287, 331, 362, 412, 450, 504, 575, 635, 700,
+                778, 861, 932, 1014, 1082, 1190, 1284, 1374, 1440, 1550,
+                1682, 1782, 1890, 2012, 2100, 2222, 2334, 2446, 2566, 2714
+            ];
+            for (let i = 1; i <= 40; i++) {
+                if (len <= limitM[i]) {
+                    return Math.max(4, i + 1); // 额外 +1 缓冲，并且至少是版本 4
+                }
+            }
+            return 40;
         }
 
         // === SVG 构建（从 qrcodejs 内部模型读取矩阵）===
@@ -1057,6 +1075,7 @@
 
             try {
                 const utf8Text = toUtf8String(text);
+                const typeNum = getRequiredTypeNumber(utf8Text);
                 if (selectedFormat === 'svg') {
                     // Use qrcodejs internally to get the QR matrix, then render as SVG
                     const ghost = document.createElement('div');
@@ -1066,7 +1085,7 @@
                         width: 220, height: 220,
                         colorDark: '#000000', colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M,
-                        typeNumber: 10
+                        typeNumber: typeNum
                     });
                     qr.makeCode(utf8Text);
                     const model = qr._oQRCode;
@@ -1083,7 +1102,7 @@
                         width: 220, height: 220,
                         colorDark: scheme.dark, colorLight: scheme.light,
                         correctLevel: QRCode.CorrectLevel.M,
-                        typeNumber: 10
+                        typeNumber: typeNum
                     });
                     qr.makeCode(utf8Text);
                     const canvas = container.querySelector('canvas');
