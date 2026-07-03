@@ -881,6 +881,8 @@
             if (!ssid) { showToast('请输入 Wi-Fi 名称', 'error'); return; }
             if (selectedWifiType !== 'nopass' && !password) { showToast('请输入 Wi-Fi 密码', 'error'); return; }
             const wifiStr = getWifiString(ssid, selectedWifiType, password, isWifiHidden);
+            console.log('[WifiGenerate] Generating Wifi QR Code. SSID:', ssid, 'Encryption:', selectedWifiType, 'Hidden:', isWifiHidden);
+
             container.innerHTML = '';
             placeholder.classList.add('hidden');
             container.classList.remove('hidden');
@@ -897,10 +899,12 @@
                     actions.classList.remove('hidden');
                     currentWifiString = wifiStr;
                     saveHistory(wifiStr, 'gen');
+                    console.log('[WifiGenerate] Successfully generated Wifi QR Code. Format:', label, 'String:', wifiStr);
                     showToast(`成功生成 ${label} Wi-Fi 二维码`, 'success');
                 }, 50);
             };
             const onError = () => {
+                console.error('[WifiGenerate] Wifi QR Code generation failed.');
                 showToast('生成失败，请检查输入', 'error');
                 placeholder.classList.remove('hidden');
                 container.classList.add('hidden');
@@ -935,6 +939,7 @@
                     onSuccess('PNG');
                 }
             } catch(e) {
+                console.error('[WifiGenerate] Error caught during generation:', e);
                 onError();
             }
         }
@@ -994,6 +999,7 @@
             const dlBtn = document.getElementById('downloadBtn');
             const actions = document.getElementById('qr-actions');
             if (!text) { showToast('请输入内容', 'error'); return; }
+            console.log('[Generate] Generating QR Code. Content length:', text.length);
 
             container.innerHTML = '';
             placeholder.classList.add('hidden');
@@ -1012,11 +1018,13 @@
                     dlBtn.disabled = false;
                     actions.classList.remove('hidden');
                     saveHistory(text, 'gen');
+                    console.log('[Generate] Successfully generated QR Code. Format:', label);
                     showToast(`成功生成 ${label} 二维码`, 'success');
                 }, 50);
             };
 
             const onError = () => {
+                console.error('[Generate] QR Code generation failed.');
                 showToast('生成失败，请检查内容', 'error');
                 placeholder.classList.remove('hidden');
                 container.classList.add('hidden');
@@ -1053,6 +1061,7 @@
                     onSuccess('PNG');
                 }
             } catch(e) {
+                console.error('[Generate] Error caught during generation:', e);
                 onError();
             }
         }
@@ -1111,6 +1120,7 @@
         });
 
         function processImage(file) {
+            console.log('[Scan] Processing image. File name:', file.name, 'Size:', file.size, 'Type:', file.type);
             const isSvg = file.type === 'image/svg+xml' || (file.name && file.name.toLowerCase().endsWith('.svg'));
             if (isSvg) {
                 const url = URL.createObjectURL(file);
@@ -1125,7 +1135,11 @@
                     decodeFromCanvas(canvas);
                     URL.revokeObjectURL(url);
                 };
-                img.onerror = () => { showToast('无法加载 SVG 文件', 'error'); URL.revokeObjectURL(url); };
+                img.onerror = () => {
+                    console.error('[Scan] Failed to load SVG file.');
+                    showToast('无法加载 SVG 文件', 'error');
+                    URL.revokeObjectURL(url);
+                };
                 img.src = url;
             } else {
                 const reader = new FileReader();
@@ -1158,13 +1172,16 @@
                     tc.width = tw; tc.height = Math.round(canvas.height * scale);
                     tc.getContext('2d').drawImage(canvas, 0, 0, tc.width, tc.height);
                     saveHistory(code.data, 'scan', tc.toDataURL('image/jpeg', 0.6));
+                    console.log('[Scan] Decode successful. Content:', code.data);
                     showToast('二维码识别成功', 'success');
                 } else {
                     statusEl.classList.remove('hidden');
                     resultEl.value = '';
+                    console.log('[Scan] No QR Code found in the image.');
                     showToast('未发现有效二维码', 'error');
                 }
             } catch(e) {
+                console.error('[Scan] Decode exception caught:', e);
                 showToast('解析过程出现错误', 'error');
             }
         }
@@ -1241,14 +1258,23 @@
         function confirmShare() {
             const text = currentShareText || document.getElementById('genInput').value.trim();
             const password = isShareEncrypted ? document.getElementById('share-pwd-input').value.trim() : '';
+            console.log('[Share] Confirming share. Encrypted protection:', isShareEncrypted, 'Include password in text:', isIncludePwd);
+
             const url = new URL(window.location.href); url.search = '';
             if (isShareEncrypted) {
                 try { url.searchParams.set('e', CryptoJS.AES.encrypt(text, password).toString()); }
-                catch(e) { return; }
+                catch(e) {
+                    console.error('[Share] AES encryption failed:', e);
+                    return;
+                }
             } else { url.searchParams.set('t', text); }
             let textToCopy = url.toString();
             if (isShareEncrypted && isIncludePwd) textToCopy = `内容：${url.toString()}\n密码：${password}`;
-            navigator.clipboard.writeText(textToCopy).then(() => { showToast('链接已成功复制', 'success'); closeShareModal(); });
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                console.log('[Share] Share link copied to clipboard successfully.');
+                showToast('链接已成功复制', 'success');
+                closeShareModal();
+            });
         }
 
         let decryptCallback = null;
@@ -1277,8 +1303,11 @@
         (function() {
             const params = new URLSearchParams(window.location.search);
             const plain = params.get('t'), enc = params.get('e');
+            console.log('[Init] App loaded. URL parameters - Plain:', !!plain, 'Encrypted:', !!enc);
+
             if (plain) {
                 if (plain.startsWith('WIFI:')) {
+                    console.log('[Init] Detected WIFI QR protocol plain string. Redirecting to Wifi panel.');
                     fillWifiFromProtocol(plain);
                     cleanUrl();
                     setTimeout(() => { switchTab('wifi'); generateWifiQRCode(); }, 600);
@@ -1287,14 +1316,17 @@
                 }
             }
             else if (enc) {
+                console.log('[Init] Detected encrypted parameter. Requesting password modal.');
                 openDecryptModal(pwd => {
                     try {
                         const bytes = CryptoJS.AES.decrypt(enc, pwd);
                         const data = bytes.toString(CryptoJS.enc.Utf8);
                         if (data) {
+                            console.log('[Init] Successful decryption of URL parameter.');
                             closeDecryptModal();
                             cleanUrl();
                             if (data.startsWith('WIFI:')) {
+                                console.log('[Init] Decrypted content is WIFI protocol. Filling Wifi panel.');
                                 fillWifiFromProtocol(data);
                                 setTimeout(() => { switchTab('wifi'); generateWifiQRCode(); }, 600);
                             } else {
@@ -1303,8 +1335,16 @@
                             }
                             showToast('成功解锁内容', 'success');
                         }
-                        else { document.getElementById('decrypt-modal-card').classList.add('animate-shake'); setTimeout(() => document.getElementById('decrypt-modal-card').classList.remove('animate-shake'), 500); showToast('密码错误', 'error'); }
-                    } catch(e) { showToast('解密失败', 'error'); }
+                        else {
+                            console.warn('[Init] Decryption returned empty string. Incorrect password.');
+                            document.getElementById('decrypt-modal-card').classList.add('animate-shake');
+                            setTimeout(() => document.getElementById('decrypt-modal-card').classList.remove('animate-shake'), 500);
+                            showToast('密码错误', 'error');
+                        }
+                    } catch(e) {
+                        console.error('[Init] Decryption exception:', e);
+                        showToast('解密失败', 'error');
+                    }
                 });
             }
         })();
