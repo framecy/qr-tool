@@ -918,7 +918,8 @@
                     const qr = new QRCode(ghost, {
                         width: 256, height: 256,
                         colorDark: '#000000', colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.M
+                        correctLevel: QRCode.CorrectLevel.M,
+                        typeNumber: 10
                     });
                     qr.makeCode(utf8WifiStr);
                     const model = qr._oQRCode;
@@ -934,7 +935,8 @@
                     const qr = new QRCode(container, {
                         width: 256, height: 256,
                         colorDark: scheme.dark, colorLight: scheme.light,
-                        correctLevel: QRCode.CorrectLevel.M
+                        correctLevel: QRCode.CorrectLevel.M,
+                        typeNumber: 10
                     });
                     qr.makeCode(utf8WifiStr);
                     const canvas = container.querySelector('canvas');
@@ -1063,7 +1065,8 @@
                     const qr = new QRCode(ghost, {
                         width: 220, height: 220,
                         colorDark: '#000000', colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.M
+                        correctLevel: QRCode.CorrectLevel.M,
+                        typeNumber: 10
                     });
                     qr.makeCode(utf8Text);
                     const model = qr._oQRCode;
@@ -1079,7 +1082,8 @@
                     const qr = new QRCode(container, {
                         width: 220, height: 220,
                         colorDark: scheme.dark, colorLight: scheme.light,
-                        correctLevel: QRCode.CorrectLevel.M
+                        correctLevel: QRCode.CorrectLevel.M,
+                        typeNumber: 10
                     });
                     qr.makeCode(utf8Text);
                     const canvas = container.querySelector('canvas');
