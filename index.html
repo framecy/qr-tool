@@ -94,6 +94,11 @@
         #qrcode img    { display: block; margin: 0 auto; border-radius: 16px; }
         #qrcode svg    { display: block; margin: 0 auto; border-radius: 16px; width: 220px; height: 220px; }
 
+        #wifi-qrcode canvas { display: block; margin: 0 auto; border-radius: 12px; }
+        #wifi-qrcode img    { display: block; margin: 0 auto; border-radius: 12px; }
+        #wifi-qrcode svg    { display: block; margin: 0 auto; border-radius: 12px; width: 156px; height: 156px; }
+
+
         .panel-hidden  { opacity: 0; transform: translateY(10px); pointer-events: none; }
         .panel-visible { opacity: 1; transform: translateY(0);    pointer-events: auto; }
 
@@ -146,6 +151,10 @@
                 <button onclick="switchTab('generate')" id="tab-generate"
                     class="relative z-10 flex-1 py-3 text-sm font-bold transition-all duration-300 outline-none">
                     生成
+                </button>
+                <button onclick="switchTab('wifi')" id="tab-wifi"
+                    class="relative z-10 flex-1 py-3 text-sm font-bold text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all duration-300 outline-none">
+                    Wi-Fi
                 </button>
                 <button onclick="switchTab('scan')" id="tab-scan"
                     class="relative z-10 flex-1 py-3 text-sm font-bold text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all duration-300 outline-none">
@@ -223,6 +232,124 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                         </svg>
                         生成二维码
+                    </button>
+                </div>
+            </div>
+
+            <!-- Wi-Fi面板 -->
+            <div id="panel-wifi" class="absolute inset-0 flex flex-col px-8 pb-8 pt-2 gap-4 transition-all duration-400 ease-out panel-hidden">
+
+                <!-- 表单区 -->
+                <div class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 slim-scroll">
+                    <!-- Wi-Fi 名称 -->
+                    <div class="flex flex-col gap-1">
+                        <label for="wifiSsid" class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Wi-Fi 名称 (SSID)</label>
+                        <div class="focus-ring rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 transition-all">
+                            <input type="text" id="wifiSsid" placeholder="请输入 Wi-Fi 名称"
+                                class="w-full px-4 py-2.5 bg-transparent text-sm text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 加密类型 -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">加密类型</label>
+                        <div class="flex gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
+                            <button id="wifi-t-wpa" onclick="selectWifiType('WPA')"
+                                class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 shadow-sm">WPA/WPA2</button>
+                            <button id="wifi-t-wep" onclick="selectWifiType('WEP')"
+                                class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-zinc-400 dark:text-zinc-500 hover:text-zinc-600">WEP</button>
+                            <button id="wifi-t-nopass" onclick="selectWifiType('nopass')"
+                                class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-zinc-400 dark:text-zinc-500 hover:text-zinc-600">无密码</button>
+                        </div>
+                    </div>
+
+                    <!-- 密码 -->
+                    <div id="wifiPasswordContainer" class="flex flex-col gap-1 transition-all duration-300">
+                        <label for="wifiPassword" class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">密码</label>
+                        <div class="focus-ring rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 transition-all relative">
+                            <input type="password" id="wifiPassword" placeholder="请输入 Wi-Fi 密码"
+                                class="w-full px-4 py-2.5 pr-10 bg-transparent text-sm text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 outline-none">
+                            <button onclick="toggleWifiPasswordVisibility()" id="wifi-toggle-pwd-btn" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors">
+                                <!-- Eye icon -->
+                                <svg id="wifi-pwd-eye" class="w-4.5 h-4.5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                <!-- Eye off icon -->
+                                <svg id="wifi-pwd-eye-off" class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 是否隐藏 -->
+                    <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 cursor-pointer select-none transition-all duration-200" onclick="toggleWifiHidden()">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-extrabold text-zinc-700 dark:text-zinc-200">隐藏网络</p>
+                                <p class="text-[10px] text-zinc-400 mt-0.5 font-medium">手动输入 SSID 连接的隐藏 Wi-Fi</p>
+                            </div>
+                            <div class="relative w-10 h-6 flex-shrink-0 transition-all duration-300 rounded-full bg-zinc-200 dark:bg-zinc-800" id="wifi-hidden-bg">
+                                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out" id="wifi-hidden-circle"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR 输出 + 操作区 -->
+                <div class="flex-shrink-0 flex flex-col gap-3">
+
+                    <!-- QR 展示框 -->
+                    <div id="wifi-qr-wrapper" class="relative w-full h-[180px] rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden group">
+                        <div id="wifiPlaceholder" class="flex flex-col items-center gap-2 text-zinc-300 dark:text-zinc-700 select-none">
+                            <svg class="w-12 h-12 opacity-40 group-hover:scale-110 transition-transform duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.284 16.284A3 3 0 0012 17a3 3 0 003.716-1.716M4.05 12.05A7 7 0 0112 13a7 7 0 017.95-1.95M1 7.8A11 11 0 0112 9a11 11 0 0111-2.2M12 21h.01"/>
+                            </svg>
+                            <span class="text-xs font-bold tracking-tight">输入 Wi-Fi 信息生成二维码</span>
+                        </div>
+                        <div id="wifi-qrcode" class="hidden p-3 bg-white rounded-3xl shadow-lg transition-all duration-500 scale-90 opacity-0"></div>
+
+                        <!-- QR actions -->
+                        <div id="wifi-qr-actions" class="hidden absolute top-3 right-3 flex flex-col gap-2">
+                            <button onclick="openWifiShareModal()" title="分享"
+                                class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-brand shadow-sm active:scale-90 transition-all">
+                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                                </svg>
+                            </button>
+                            <button onclick="downloadWifiQRCode()" id="wifiDownloadBtn" disabled title="下载"
+                                class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 [&:not(:disabled)]:hover:text-brand shadow-sm active:scale-90 transition-all">
+                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 配色 & 格式 -->
+                    <div class="flex items-center justify-between px-1">
+                        <!-- Color swatches -->
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-600">配色</span>
+                            <div id="wifi-color-swatches" class="flex gap-2"></div>
+                        </div>
+                        <!-- Format toggle -->
+                        <div class="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
+                            <button id="wifi-fmt-png" onclick="selectFormat('png')"
+                                class="px-3 py-1 rounded-[8px] text-[10px] font-black transition-all bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 shadow-sm">PNG</button>
+                            <button id="wifi-fmt-svg" onclick="selectFormat('svg')"
+                                class="px-3 py-1 rounded-[8px] text-[10px] font-black transition-all text-zinc-400 dark:text-zinc-500 hover:text-zinc-600">SVG</button>
+                        </div>
+                    </div>
+
+                    <!-- 生成按钮 -->
+                    <button onclick="generateWifiQRCode()"
+                        class="w-full py-4 rounded-2xl bg-brand hover:bg-brand-hover text-white font-extrabold text-base flex items-center justify-center gap-3 shadow-lg shadow-brand/20 active:scale-[0.98] transition-all">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        生成 Wi-Fi 二维码
                     </button>
                 </div>
             </div>
@@ -470,7 +597,19 @@
             }).join('');
         }
         function copyText(text) { navigator.clipboard.writeText(text).then(() => showToast('已成功复制', 'success')).catch(() => showToast('复制失败', 'error')); }
-        function fillGen(text) { document.getElementById('genInput').value = text; toggleHistory(false); switchTab('generate'); showToast('内容已填充', 'success'); }
+        function fillGen(text) {
+            if (text.startsWith('WIFI:')) {
+                fillWifiFromProtocol(text);
+                toggleHistory(false);
+                switchTab('wifi');
+                showToast('Wi-Fi 信息已填充', 'success');
+            } else {
+                document.getElementById('genInput').value = text;
+                toggleHistory(false);
+                switchTab('generate');
+                showToast('内容已填充', 'success');
+            }
+        }
 
         // === 主题 ===
         function initTheme() {
@@ -493,37 +632,52 @@
 
         // === Tab 切换 ===
         function switchTab(tab) {
-            const genPanel = document.getElementById('panel-generate');
-            const scanPanel = document.getElementById('panel-scan');
-            const genTab = document.getElementById('tab-generate');
-            const scanTab = document.getElementById('tab-scan');
+            const tabs = {
+                'generate': {
+                    panel: document.getElementById('panel-generate'),
+                    btn: document.getElementById('tab-generate')
+                },
+                'wifi': {
+                    panel: document.getElementById('panel-wifi'),
+                    btn: document.getElementById('tab-wifi')
+                },
+                'scan': {
+                    panel: document.getElementById('panel-scan'),
+                    btn: document.getElementById('tab-scan')
+                }
+            };
             const indicator = document.getElementById('tab-indicator');
             const inactiveCls = ['text-zinc-400', 'dark:text-zinc-500', 'hover:text-zinc-600', 'dark:hover:text-zinc-300'];
-            if (tab === 'generate') {
-                genPanel.classList.replace('panel-hidden', 'panel-visible');
-                scanPanel.classList.replace('panel-visible', 'panel-hidden');
-                genTab.classList.remove(...inactiveCls);
-                genTab.classList.add('text-zinc-900', 'dark:text-white');
-                scanTab.classList.add(...inactiveCls);
-                scanTab.classList.remove('text-zinc-900', 'dark:text-white');
-                const r = genTab.getBoundingClientRect(), p = document.getElementById('tab-bar').getBoundingClientRect();
-                indicator.style.left = (r.left - p.left) + 'px';
-                indicator.style.width = r.width + 'px';
-            } else {
-                scanPanel.classList.replace('panel-hidden', 'panel-visible');
-                genPanel.classList.replace('panel-visible', 'panel-hidden');
-                scanTab.classList.remove(...inactiveCls);
-                scanTab.classList.add('text-zinc-900', 'dark:text-white');
-                genTab.classList.add(...inactiveCls);
-                genTab.classList.remove('text-zinc-900', 'dark:text-white');
-                const r = scanTab.getBoundingClientRect(), p = document.getElementById('tab-bar').getBoundingClientRect();
-                indicator.style.left = (r.left - p.left) + 'px';
-                indicator.style.width = r.width + 'px';
-            }
+
+            Object.keys(tabs).forEach(k => {
+                const t = tabs[k];
+                if (k === tab) {
+                    t.panel.classList.remove('panel-hidden');
+                    t.panel.classList.add('panel-visible');
+                    t.btn.classList.remove(...inactiveCls);
+                    t.btn.classList.add('text-zinc-900', 'dark:text-white');
+                } else {
+                    t.panel.classList.remove('panel-visible');
+                    t.panel.classList.add('panel-hidden');
+                    t.btn.classList.add(...inactiveCls);
+                    t.btn.classList.remove('text-zinc-900', 'dark:text-white');
+                }
+            });
+
+            const activeBtn = tabs[tab].btn;
+            const r = activeBtn.getBoundingClientRect();
+            const p = document.getElementById('tab-bar').getBoundingClientRect();
+            indicator.style.left = (r.left - p.left) + 'px';
+            indicator.style.width = r.width + 'px';
         }
         window.addEventListener('load', () => setTimeout(() => switchTab('generate'), 150));
         window.addEventListener('resize', () => {
-            const active = document.getElementById('panel-generate').classList.contains('panel-visible') ? 'generate' : 'scan';
+            let active = 'generate';
+            if (document.getElementById('panel-wifi').classList.contains('panel-visible')) {
+                active = 'wifi';
+            } else if (document.getElementById('panel-scan').classList.contains('panel-visible')) {
+                active = 'scan';
+            }
             switchTab(active);
         });
 
@@ -541,11 +695,14 @@
 
         function renderColorSwatches() {
             const el = document.getElementById('color-swatches');
-            el.innerHTML = COLOR_SCHEMES.map((s, i) => `
+            const elWifi = document.getElementById('wifi-color-swatches');
+            const html = COLOR_SCHEMES.map((s, i) => `
                 <button onclick="selectColor(${i})" title="${s.name}"
                     class="w-7 h-7 rounded-full border-2 border-white dark:border-zinc-950 shadow-sm hover:scale-110 active:scale-95 transition-all duration-200 ${i === selectedColorIndex ? 'swatch-active' : ''}"
                     style="background:linear-gradient(135deg,${s.dark} 50%,${s.light} 50%)">
                 </button>`).join('');
+            if (el) el.innerHTML = html;
+            if (elWifi) elWifi.innerHTML = html;
         }
 
         function selectColor(index) {
@@ -557,11 +714,258 @@
             selectedFormat = fmt;
             const png = document.getElementById('fmt-png');
             const svg = document.getElementById('fmt-svg');
+            const wifiPng = document.getElementById('wifi-fmt-png');
+            const wifiSvg = document.getElementById('wifi-fmt-svg');
             const active = 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 shadow-sm';
             const inactive = 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600';
-            png.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'png' ? active : inactive}`;
-            svg.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'svg' ? active : inactive}`;
+            if (png && svg) {
+                png.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'png' ? active : inactive}`;
+                svg.className = `px-3.5 py-1.5 rounded-[10px] text-[11px] font-black transition-all ${fmt === 'svg' ? active : inactive}`;
+            }
+            if (wifiPng && wifiSvg) {
+                wifiPng.className = `px-3 py-1 rounded-[8px] text-[10px] font-black transition-all ${fmt === 'png' ? active : inactive}`;
+                wifiSvg.className = `px-3 py-1 rounded-[8px] text-[10px] font-black transition-all ${fmt === 'svg' ? active : inactive}`;
+            }
         }
+
+        // === Wi-Fi 逻辑 ===
+        let selectedWifiType = 'WPA';
+        let isWifiHidden = false;
+        let isWifiPasswordVisible = false;
+        let currentWifiString = '';
+        let currentWifiSvgString = '';
+
+        function escapeWifiString(str) {
+            if (!str) return '';
+            return str.replace(/([\\;,":])/g, '\\$1');
+        }
+
+        function getWifiString(ssid, type, password, isHidden) {
+            const escapedSsid = escapeWifiString(ssid);
+            const escapedPassword = (type === 'nopass') ? '' : escapeWifiString(password);
+            return `WIFI:T:${type};S:${escapedSsid};${type !== 'nopass' ? `P:${escapedPassword};` : ''}H:${isHidden ? 'true' : 'false'};;`;
+        }
+
+        function parseWifiProtocol(wifiStr) {
+            const result = { T: 'nopass', S: '', P: '', H: 'false' };
+            if (!wifiStr.startsWith('WIFI:')) return result;
+            let content = wifiStr.substring(5);
+            if (content.endsWith(';;')) {
+                content = content.slice(0, -2);
+            } else if (content.endsWith(';')) {
+                content = content.slice(0, -1);
+            }
+            let i = 0;
+            let currentKey = '';
+            let currentValue = '';
+            let inValue = false;
+            while (i < content.length) {
+                const char = content[i];
+                if (!inValue) {
+                    if (char === ':') {
+                        inValue = true;
+                    } else {
+                        currentKey += char;
+                    }
+                    i++;
+                } else {
+                    if (char === '\\' && i + 1 < content.length) {
+                        currentValue += content[i + 1];
+                        i += 2;
+                    } else if (char === ';') {
+                        result[currentKey] = currentValue;
+                        currentKey = '';
+                        currentValue = '';
+                        inValue = false;
+                        i++;
+                    } else {
+                        currentValue += char;
+                        i++;
+                    }
+                }
+            }
+            if (currentKey && currentValue) {
+                result[currentKey] = currentValue;
+            }
+            return result;
+        }
+
+        function fillWifiFromProtocol(wifiStr) {
+            const parsed = parseWifiProtocol(wifiStr);
+            document.getElementById('wifiSsid').value = parsed.S || '';
+            const type = parsed.T || 'nopass';
+            selectWifiType(type);
+            if (type !== 'nopass') {
+                document.getElementById('wifiPassword').value = parsed.P || '';
+            } else {
+                document.getElementById('wifiPassword').value = '';
+            }
+            isWifiHidden = (parsed.H === 'true');
+            const bg = document.getElementById('wifi-hidden-bg');
+            const circle = document.getElementById('wifi-hidden-circle');
+            if (isWifiHidden) {
+                bg.classList.remove('bg-zinc-200', 'dark:bg-zinc-800');
+                bg.classList.add('bg-brand');
+                circle.classList.add('translate-x-4');
+            } else {
+                bg.classList.add('bg-zinc-200', 'dark:bg-zinc-800');
+                bg.classList.remove('bg-brand');
+                circle.classList.remove('translate-x-4');
+            }
+        }
+
+        function selectWifiType(type) {
+            selectedWifiType = type;
+            const btnWpa = document.getElementById('wifi-t-wpa');
+            const btnWep = document.getElementById('wifi-t-wep');
+            const btnNopass = document.getElementById('wifi-t-nopass');
+            const pwdContainer = document.getElementById('wifiPasswordContainer');
+            const active = 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 shadow-sm';
+            const inactive = 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600';
+            [btnWpa, btnWep, btnNopass].forEach(btn => {
+                btn.className = `flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${inactive}`;
+            });
+            let activeBtn;
+            if (type === 'WPA') activeBtn = btnWpa;
+            else if (type === 'WEP') activeBtn = btnWep;
+            else activeBtn = btnNopass;
+            activeBtn.className = `flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${active}`;
+            if (type === 'nopass') {
+                pwdContainer.classList.add('opacity-40', 'pointer-events-none');
+                document.getElementById('wifiPassword').value = '';
+                document.getElementById('wifiPassword').disabled = true;
+            } else {
+                pwdContainer.classList.remove('opacity-40', 'pointer-events-none');
+                document.getElementById('wifiPassword').disabled = false;
+            }
+        }
+
+        function toggleWifiHidden() {
+            isWifiHidden = !isWifiHidden;
+            const bg = document.getElementById('wifi-hidden-bg');
+            const circle = document.getElementById('wifi-hidden-circle');
+            if (isWifiHidden) {
+                bg.classList.remove('bg-zinc-200', 'dark:bg-zinc-800');
+                bg.classList.add('bg-brand');
+                circle.classList.add('translate-x-4');
+            } else {
+                bg.classList.add('bg-zinc-200', 'dark:bg-zinc-800');
+                bg.classList.remove('bg-brand');
+                circle.classList.remove('translate-x-4');
+            }
+        }
+
+        function toggleWifiPasswordVisibility() {
+            isWifiPasswordVisible = !isWifiPasswordVisible;
+            const pwdInput = document.getElementById('wifiPassword');
+            const eye = document.getElementById('wifi-pwd-eye');
+            const eyeOff = document.getElementById('wifi-pwd-eye-off');
+            if (isWifiPasswordVisible) {
+                pwdInput.type = 'text';
+                eye.classList.remove('hidden');
+                eyeOff.classList.add('hidden');
+            } else {
+                pwdInput.type = 'password';
+                eye.classList.add('hidden');
+                eyeOff.classList.remove('hidden');
+            }
+        }
+
+        function generateWifiQRCode() {
+            const ssid = document.getElementById('wifiSsid').value.trim();
+            const password = document.getElementById('wifiPassword').value;
+            const container = document.getElementById('wifi-qrcode');
+            const placeholder = document.getElementById('wifiPlaceholder');
+            const dlBtn = document.getElementById('wifiDownloadBtn');
+            const actions = document.getElementById('wifi-qr-actions');
+            if (!ssid) { showToast('请输入 Wi-Fi 名称', 'error'); return; }
+            if (selectedWifiType !== 'nopass' && !password) { showToast('请输入 Wi-Fi 密码', 'error'); return; }
+            const wifiStr = getWifiString(ssid, selectedWifiType, password, isWifiHidden);
+            container.innerHTML = '';
+            placeholder.classList.add('hidden');
+            container.classList.remove('hidden');
+            container.classList.add('scale-90', 'opacity-0');
+            actions.classList.add('hidden');
+            dlBtn.disabled = true;
+            currentWifiSvgString = '';
+            const scheme = COLOR_SCHEMES[selectedColorIndex];
+            const onSuccess = (label) => {
+                setTimeout(() => {
+                    container.classList.remove('scale-90', 'opacity-0');
+                    container.classList.add('scale-100', 'opacity-100');
+                    dlBtn.disabled = false;
+                    actions.classList.remove('hidden');
+                    currentWifiString = wifiStr;
+                    saveHistory(wifiStr, 'gen');
+                    showToast(`成功生成 ${label} Wi-Fi 二维码`, 'success');
+                }, 50);
+            };
+            const onError = () => {
+                showToast('生成失败，请检查输入', 'error');
+                placeholder.classList.remove('hidden');
+                container.classList.add('hidden');
+            };
+            try {
+                if (selectedFormat === 'svg') {
+                    const ghost = document.createElement('div');
+                    ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
+                    document.body.appendChild(ghost);
+                    const qr = new QRCode(ghost, {
+                        text: wifiStr, width: 156, height: 156,
+                        colorDark: '#000000', colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    const model = qr._oQRCode;
+                    document.body.removeChild(ghost);
+                    if (!model) { onError(); return; }
+                    const svgStr = buildSvg(model, scheme.dark, scheme.light, 156);
+                    currentWifiSvgString = svgStr;
+                    container.innerHTML = svgStr;
+                    const svgEl = container.querySelector('svg');
+                    if (svgEl) svgEl.style.borderRadius = '12px';
+                    onSuccess('SVG');
+                } else {
+                    new QRCode(container, {
+                        text: wifiStr, width: 156, height: 156,
+                        colorDark: scheme.dark, colorLight: scheme.light,
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    const canvas = container.querySelector('canvas');
+                    if (canvas) canvas.style.borderRadius = '12px';
+                    onSuccess('PNG');
+                }
+            } catch(e) {
+                onError();
+            }
+        }
+
+        function downloadWifiQRCode() {
+            if (selectedFormat === 'svg' && currentWifiSvgString) {
+                const blob = new Blob([currentWifiSvgString], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.download = `WIFI_QR_${Date.now()}.svg`;
+                a.href = url; a.click();
+                URL.revokeObjectURL(url);
+                showToast('正在为您下载 SVG', 'success');
+            } else {
+                const canvas = document.querySelector('#wifi-qrcode canvas');
+                const img = document.querySelector('#wifi-qrcode img');
+                const url = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+                if (url) {
+                    const a = document.createElement('a');
+                    a.download = `WIFI_QR_${Date.now()}.png`;
+                    a.href = url; a.click();
+                    showToast('正在为您下载图片', 'success');
+                }
+            }
+        }
+
+        function openWifiShareModal() {
+            if (!currentWifiString) { showToast('请先生成 Wi-Fi 二维码', 'error'); return; }
+            openShareModal(currentWifiString);
+        }
+
 
         // === SVG 构建（从 qrcodejs 内部模型读取矩阵）===
         function buildSvg(model, darkColor, lightColor, size) {
@@ -779,13 +1183,18 @@
 
         // === 分享/解密 ===
         let isShareEncrypted = false, isIncludePwd = false;
+        let currentShareText = '';
 
-        function openShareModal() {
-            const text = document.getElementById('genInput').value.trim();
-            if (!text) { showToast('请先输入内容', 'error'); return; }
+        function openShareModal(text) {
+            let targetText = text;
+            if (typeof targetText !== 'string' || !targetText) {
+                targetText = document.getElementById('genInput').value.trim();
+            }
+            if (!targetText) { showToast('请先输入或生成内容', 'error'); return; }
+            currentShareText = targetText;
+
             isShareEncrypted = false; isIncludePwd = false;
-            document.getElementById('share-switch-bg').classList.add('bg-zinc-200','dark:bg-zinc-800');
-            document.getElementById('share-switch-bg').classList.remove('bg-brand');
+            document.getElementById('share-switch-bg').className = 'relative w-14 h-8 flex-shrink-0 transition-all duration-300 rounded-full bg-zinc-200 dark:bg-zinc-800';
             document.getElementById('share-switch-circle').classList.remove('translate-x-6');
             document.getElementById('share-pwd-container').classList.add('hidden');
             const box = document.getElementById('include-pwd-checkbox');
@@ -810,11 +1219,11 @@
             const circle = document.getElementById('share-switch-circle');
             const container = document.getElementById('share-pwd-container');
             if (isShareEncrypted) {
-                bg.classList.remove('bg-zinc-200','dark:bg-zinc-800'); bg.classList.add('bg-brand');
+                bg.className = 'relative w-14 h-8 flex-shrink-0 transition-all duration-300 rounded-full bg-brand';
                 circle.classList.add('translate-x-6'); container.classList.remove('hidden');
                 regenerateKey();
             } else {
-                bg.classList.add('bg-zinc-200','dark:bg-zinc-800'); bg.classList.remove('bg-brand');
+                bg.className = 'relative w-14 h-8 flex-shrink-0 transition-all duration-300 rounded-full bg-zinc-200 dark:bg-zinc-800';
                 circle.classList.remove('translate-x-6'); container.classList.add('hidden');
             }
         }
@@ -830,7 +1239,7 @@
         function regenerateKey() { document.getElementById('share-pwd-input').value = Math.random().toString(36).slice(-6).toUpperCase(); }
 
         function confirmShare() {
-            const text = document.getElementById('genInput').value.trim();
+            const text = currentShareText || document.getElementById('genInput').value.trim();
             const password = isShareEncrypted ? document.getElementById('share-pwd-input').value.trim() : '';
             const url = new URL(window.location.href); url.search = '';
             if (isShareEncrypted) {
@@ -868,13 +1277,32 @@
         (function() {
             const params = new URLSearchParams(window.location.search);
             const plain = params.get('t'), enc = params.get('e');
-            if (plain) { document.getElementById('genInput').value = plain; cleanUrl(); autoGen(); }
+            if (plain) {
+                if (plain.startsWith('WIFI:')) {
+                    fillWifiFromProtocol(plain);
+                    cleanUrl();
+                    setTimeout(() => { switchTab('wifi'); generateWifiQRCode(); }, 600);
+                } else {
+                    document.getElementById('genInput').value = plain; cleanUrl(); autoGen();
+                }
+            }
             else if (enc) {
                 openDecryptModal(pwd => {
                     try {
                         const bytes = CryptoJS.AES.decrypt(enc, pwd);
                         const data = bytes.toString(CryptoJS.enc.Utf8);
-                        if (data) { document.getElementById('genInput').value = data; closeDecryptModal(); cleanUrl(); autoGen(); showToast('成功解锁内容', 'success'); }
+                        if (data) {
+                            closeDecryptModal();
+                            cleanUrl();
+                            if (data.startsWith('WIFI:')) {
+                                fillWifiFromProtocol(data);
+                                setTimeout(() => { switchTab('wifi'); generateWifiQRCode(); }, 600);
+                            } else {
+                                document.getElementById('genInput').value = data;
+                                autoGen();
+                            }
+                            showToast('成功解锁内容', 'success');
+                        }
                         else { document.getElementById('decrypt-modal-card').classList.add('animate-shake'); setTimeout(() => document.getElementById('decrypt-modal-card').classList.remove('animate-shake'), 500); showToast('密码错误', 'error'); }
                     } catch(e) { showToast('解密失败', 'error'); }
                 });
