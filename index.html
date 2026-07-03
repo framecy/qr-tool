@@ -240,7 +240,7 @@
             <div id="panel-wifi" class="absolute inset-0 flex flex-col px-8 pb-8 pt-2 gap-4 transition-all duration-400 ease-out panel-hidden">
 
                 <!-- 表单区 -->
-                <div class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 slim-scroll">
+                <div class="flex-shrink-0 space-y-3 pr-1">
                     <!-- Wi-Fi 名称 -->
                     <div class="flex flex-col gap-1">
                         <label for="wifiSsid" class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Wi-Fi 名称 (SSID)</label>
@@ -298,10 +298,10 @@
                 </div>
 
                 <!-- QR 输出 + 操作区 -->
-                <div class="flex-shrink-0 flex flex-col gap-3">
+                <div class="flex-1 min-h-0 flex flex-col gap-3">
 
                     <!-- QR 展示框 -->
-                    <div id="wifi-qr-wrapper" class="relative w-full h-[180px] rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden group">
+                    <div id="wifi-qr-wrapper" class="relative w-full flex-1 min-h-[140px] rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden group">
                         <div id="wifiPlaceholder" class="flex flex-col items-center gap-2 text-zinc-300 dark:text-zinc-700 select-none">
                             <svg class="w-12 h-12 opacity-40 group-hover:scale-110 transition-transform duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.284 16.284A3 3 0 0012 17a3 3 0 003.716-1.716M4.05 12.05A7 7 0 0112 13a7 7 0 017.95-1.95M1 7.8A11 11 0 0112 9a11 11 0 0111-2.2M12 21h.01"/>
