@@ -916,10 +916,11 @@
                     ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
                     document.body.appendChild(ghost);
                     const qr = new QRCode(ghost, {
-                        text: utf8WifiStr, width: 256, height: 256,
+                        width: 256, height: 256,
                         colorDark: '#000000', colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M
                     });
+                    qr.makeCode(utf8WifiStr);
                     const model = qr._oQRCode;
                     document.body.removeChild(ghost);
                     if (!model) { onError(); return; }
@@ -930,11 +931,12 @@
                     if (svgEl) svgEl.style.borderRadius = '12px';
                     onSuccess('SVG');
                 } else {
-                    new QRCode(container, {
-                        text: utf8WifiStr, width: 256, height: 256,
+                    const qr = new QRCode(container, {
+                        width: 256, height: 256,
                         colorDark: scheme.dark, colorLight: scheme.light,
                         correctLevel: QRCode.CorrectLevel.M
                     });
+                    qr.makeCode(utf8WifiStr);
                     const canvas = container.querySelector('canvas');
                     if (canvas) canvas.style.borderRadius = '12px';
                     onSuccess('PNG');
@@ -1059,10 +1061,11 @@
                     ghost.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;';
                     document.body.appendChild(ghost);
                     const qr = new QRCode(ghost, {
-                        text: utf8Text, width: 220, height: 220,
+                        width: 220, height: 220,
                         colorDark: '#000000', colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M
                     });
+                    qr.makeCode(utf8Text);
                     const model = qr._oQRCode;
                     document.body.removeChild(ghost);
                     if (!model) { onError(); return; }
@@ -1073,11 +1076,12 @@
                     if (svgEl) svgEl.style.borderRadius = '16px';
                     onSuccess('SVG');
                 } else {
-                    new QRCode(container, {
-                        text: utf8Text, width: 220, height: 220,
+                    const qr = new QRCode(container, {
+                        width: 220, height: 220,
                         colorDark: scheme.dark, colorLight: scheme.light,
                         correctLevel: QRCode.CorrectLevel.M
                     });
+                    qr.makeCode(utf8Text);
                     const canvas = container.querySelector('canvas');
                     if (canvas) canvas.style.borderRadius = '16px';
                     onSuccess('PNG');
